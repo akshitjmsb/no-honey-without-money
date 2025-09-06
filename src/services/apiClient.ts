@@ -5,7 +5,7 @@
 import { handleApiError } from '../utils/errorHandler';
 import type { FinancialData, AimDataItem, Holding } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3001';
 
 class ApiClient {
   private baseUrl: string;

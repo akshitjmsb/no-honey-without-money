@@ -5,7 +5,7 @@ import { ChatComponent } from './components/ChatComponent';
 import { DeepDiveModal } from './components/DeepDiveModal';
 import { useFinancialData } from './hooks/useFinancialData';
 import { useDeepDive } from './hooks/useDeepDive';
-import type { AimDataItem, Holding, EditingField } from './types';
+import type { AimDataItem, Holding } from './types';
 import { portfolioData, initialAimDataRaw, initialTargetInvestment } from './data/portfolioData';
 import { formatCurrency } from './utils/formatters';
 import { EXCHANGE_RATES } from './utils/constants';
@@ -13,8 +13,6 @@ import { EXCHANGE_RATES } from './utils/constants';
 const App: React.FC = () => {
   // State management
   const [aimData, setAimData] = useState<AimDataItem[]>(() => {
-    const cashItem = initialAimDataRaw.find(item => item.ticker === 'CASH');
-    const initialCashBalance = cashItem ? cashItem.amountCAD : 0;
     const filteredAimDataRaw = initialAimDataRaw.filter(item => item.ticker !== 'CASH');
     
     return filteredAimDataRaw.map((item, index) => ({
@@ -37,8 +35,8 @@ const App: React.FC = () => {
   const [title, setTitle] = useState('No Honey without Money');
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
-  const [whatIfPrices, setWhatIfPrices] = useState<{ [key: string]: string }>({});
-  const [editingField, setEditingField] = useState<EditingField | null>(null);
+  const [whatIfPrices] = useState<{ [key: string]: string }>({});
+  // const [editingField] = useState<EditingField | null>(null);
 
   // Drag and drop state
   const isDragging = useRef(false);
@@ -104,14 +102,14 @@ const App: React.FC = () => {
   }, [holdings, financialData, whatIfPrices, cashBalance, displayCurrency, aimData]);
 
   // Time calculations
-  const daysLeft = useMemo(() => {
-    const diff = new Date(targetDate).getTime() - new Date().getTime();
-    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-  }, [targetDate]);
+  // const daysLeft = useMemo(() => {
+  //   const diff = new Date(targetDate).getTime() - new Date().getTime();
+  //   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  // }, [targetDate]);
 
-  const weeksLeft = Math.max(1, Math.ceil(daysLeft / 7));
-  const investmentNeeded = targetInvestment - totalPortfolioValue;
-  const weeklyInvestment = investmentNeeded > 0 ? investmentNeeded / weeksLeft : 0;
+  // const weeksLeft = Math.max(1, Math.ceil(daysLeft / 7));
+  // const investmentNeeded = targetInvestment - totalPortfolioValue;
+  // const weeklyInvestment = investmentNeeded > 0 ? investmentNeeded / weeksLeft : 0;
 
   // Event handlers
   const handleUpdateAimData = (id: number, field: keyof AimDataItem, value: any) => {
@@ -256,20 +254,20 @@ const App: React.FC = () => {
               if (index < currentCardIndex) return null;
               const isCurrent = index === currentCardIndex;
               
-              const cardStyle = {
-                transform: isCurrent ? `translateX(${dragDeltaX.current}px) rotate(${dragDeltaX.current / 20}deg)` : `translateY(${(index - currentCardIndex) * -10}px) scale(${1 - (index - currentCardIndex) * 0.05})`,
-                zIndex: allCards.length - index,
-                opacity: index > currentCardIndex + 2 ? 0 : 1
-              };
+              // const cardStyle = {
+              //   transform: isCurrent ? `translateX(${dragDeltaX.current}px) rotate(${dragDeltaX.current / 20}deg)` : `translateY(${(index - currentCardIndex) * -10}px) scale(${1 - (index - currentCardIndex) * 0.05})`,
+              //   zIndex: allCards.length - index,
+              //   opacity: index > currentCardIndex + 2 ? 0 : 1
+              // };
               
               const dragHandlers = {
-                onMouseDown: isCurrent ? startDrag : undefined,
-                onMouseMove: isCurrent ? onDrag : undefined,
-                onMouseUp: isCurrent ? endDrag : undefined,
-                onMouseLeave: isCurrent ? endDrag : undefined,
-                onTouchStart: isCurrent ? startDrag : undefined,
-                onTouchMove: isCurrent ? onDrag : undefined,
-                onTouchEnd: isCurrent ? endDrag : undefined,
+                ...(isCurrent && { onMouseDown: startDrag }),
+                ...(isCurrent && { onMouseMove: onDrag }),
+                ...(isCurrent && { onMouseUp: endDrag }),
+                ...(isCurrent && { onMouseLeave: endDrag }),
+                ...(isCurrent && { onTouchStart: startDrag }),
+                ...(isCurrent && { onTouchMove: onDrag }),
+                ...(isCurrent && { onTouchEnd: endDrag }),
               };
 
               if ('isSummary' in card) {

@@ -22,27 +22,29 @@
     "install:all": "npm install && npm run server:install"
   },
   "dependencies": {
-    "react-dom": "^19.1.1",
+    "@google/genai": "^1.14.0",
     "react": "^19.1.1",
-    "@google/genai": "^1.14.0"
+    "react-dom": "^19.1.1"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.8.0",
+    "@testing-library/react": "^14.1.2",
+    "@testing-library/user-event": "^14.5.1",
     "@types/node": "^22.14.0",
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
     "@vitejs/plugin-react": "^4.2.1",
+    "concurrently": "^8.2.2",
     "eslint": "^8.57.0",
     "eslint-plugin-jsx-a11y": "^6.8.0",
     "eslint-plugin-react": "^7.34.0",
     "eslint-plugin-react-hooks": "^4.6.0",
+    "jsdom": "^23.0.1",
     "prettier": "^3.2.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0",
-    "vitest": "^1.2.0",
-    "@testing-library/react": "^14.1.2",
-    "@testing-library/jest-dom": "^6.1.5",
-    "@testing-library/user-event": "^14.5.1",
-    "jsdom": "^23.0.1",
-    "concurrently": "^8.2.2"
+    "vitest": "^1.2.0"
   }
 }

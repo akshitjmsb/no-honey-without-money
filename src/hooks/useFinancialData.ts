@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { FinancialData } from '../types';
-import { handleApiError, isRateLimitError } from '../utils/errorHandler';
+import { isRateLimitError } from '../utils/errorHandler';
 import { API_CONFIG } from '../utils/constants';
 import { apiClient } from '../services/apiClient';
 
@@ -20,14 +20,14 @@ export const useFinancialData = () => {
       [ticker]: {
         ...prev[ticker],
         isLoading: true,
-        error: undefined,
+        error: '',
       }
     }));
     
     for (let attempt = 1; attempt <= API_CONFIG.RETRY_ATTEMPTS; attempt++) {
       try {
         const data = await apiClient.getFinancialData(ticker);
-        setFinancialData(prev => ({ ...prev, [ticker]: { isLoading: false, ...data } }));
+        setFinancialData(prev => ({ ...prev, [ticker]: { ...data, isLoading: false } }));
         return;
 
       } catch (fetchError) {

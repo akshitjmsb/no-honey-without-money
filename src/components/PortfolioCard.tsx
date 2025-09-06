@@ -3,7 +3,7 @@ import { Sparkline } from './Sparkline';
 import { RangeBar } from './RangeBar';
 import { EditableField } from './EditableField';
 import type { AimDataItem, Holding, FinancialData } from '../types';
-import { formatCurrency, formatPercent } from '../utils/formatters';
+import { formatCurrency } from '../utils/formatters';
 
 interface PortfolioCardProps {
   item: AimDataItem;
@@ -214,7 +214,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
             low={financialData.analystRatings?.targetLow}
             high={financialData.analystRatings?.targetHigh}
             current={financialData.currentPrice}
-            average={financialData.analystRatings?.targetAverage}
+            average={financialData.analystRatings?.targetAverage ?? null}
             width="100%"
           />
         </div>
