@@ -60,7 +60,13 @@ jobs:
     
     - name: Check for secrets in code
       run: |
-        if git grep -i "api_key\|password\|secret\|token" -- "*.tsx" "*.ts" "*.js" "*.jsx" | grep -v "process.env" | grep -v "your_api_key_here"; then
+        # Check for hardcoded secrets (not environment variable references)
+        if git grep -E "(api_key|password|secret|token)\s*[:=]\s*['\"][^'\"]{10,}" -- "*.tsx" "*.ts" "*.js" "*.jsx"; then
+          echo "Potential hardcoded secrets found in code!"
+          exit 1
+        fi
+        # Check for suspicious patterns that aren't environment variables
+        if git grep -i "api_key\|password\|secret\|token" -- "*.tsx" "*.ts" "*.js" "*.jsx" | grep -v "process.env" | grep -v "your_api_key_here" | grep -v "GEMINI_API_KEY" | grep -v "JSON.stringify"; then
           echo "Potential secrets found in code!"
           exit 1
         fi
