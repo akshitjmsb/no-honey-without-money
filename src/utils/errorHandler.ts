@@ -16,8 +16,8 @@ export class AppError extends Error {
   constructor(message: string, code?: string | number, status?: number, isOperational = true) {
     super(message);
     this.name = 'AppError';
-    this.code = code ?? '';
-    this.status = status ?? 500;
+    this.code = code;
+    this.status = status;
     this.isOperational = isOperational;
 
     // Maintains proper stack trace for where our error was thrown
