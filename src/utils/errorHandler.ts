@@ -4,16 +4,16 @@
 
 export interface ApiError {
   message: string;
-  code?: string | number;
-  status?: number;
+  code?: string | number | undefined;
+  status?: number | undefined;
 }
 
 export class AppError extends Error {
-  public readonly code?: string | number;
-  public readonly status?: number;
+  public readonly code?: string | number | undefined;
+  public readonly status?: number | undefined;
   public readonly isOperational: boolean;
 
-  constructor(message: string, code?: string | number, status?: number, isOperational = true) {
+  constructor(message: string, code?: string | number | undefined, status?: number | undefined, isOperational = true) {
     super(message);
     this.name = 'AppError';
     this.code = code;
