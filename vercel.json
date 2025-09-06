@@ -1,0 +1,5 @@
+{
+  "env": {
+    "VITE_API_URL": "https://server-peakrc1qs-akshit-guptas-projects-add2f9c0.vercel.app"
+  }
+}
