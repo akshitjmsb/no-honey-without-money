@@ -32,59 +32,103 @@ A sophisticated React-based portfolio management application that helps investor
    cd no-honey-without-money
    ```
 
-2. **Install dependencies**
+2. **Install all dependencies (frontend + backend)**
    ```bash
-   npm install
+   npm run install:all
    ```
 
 3. **Set up environment variables**
-   Create a `.env.local` file in the root directory:
+   
+   **Backend (Required):**
    ```bash
+   cp server/env.example server/.env
+   # Edit server/.env and add your API key:
    GEMINI_API_KEY=your_gemini_api_key_here
    ```
-
-4. **Run the development server**
+   
+   **Frontend (Optional):**
    ```bash
-   npm run dev
+   cp env.template .env.local
+   # Edit .env.local if you want to change the API URL
+   ```
+
+4. **Run the full application**
+   ```bash
+   npm run dev:full
    ```
 
 5. **Open your browser**
-   Navigate to `http://localhost:5173`
+   - Frontend: `http://localhost:5173`
+   - Backend API: `http://localhost:3001`
 
 ## 🔧 Available Scripts
 
-- `npm run dev` - Start development server
+### Frontend
+- `npm run dev` - Start frontend development server
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build
+- `npm run lint` - Run ESLint
+- `npm run test` - Run tests
+
+### Backend
+- `npm run server:dev` - Start backend in development mode
+- `npm run server:start` - Start backend in production mode
+
+### Full Stack
+- `npm run dev:full` - Start both frontend and backend
+- `npm run install:all` - Install all dependencies
 
 ## 🏗️ Project Structure
 
 ```
 no-honey-without-money/
-├── index.html          # Main HTML entry point
-├── index.tsx           # React application component
-├── index.css           # Application styles
-├── package.json        # Dependencies and scripts
-├── tsconfig.json       # TypeScript configuration
-├── vite.config.ts      # Vite build configuration
-├── .gitignore          # Git ignore rules
-└── README.md           # This file
+├── src/                    # Frontend source code
+│   ├── components/         # React components
+│   ├── hooks/             # Custom React hooks
+│   ├── services/          # API client
+│   ├── utils/             # Utility functions
+│   ├── types/             # TypeScript types
+│   ├── data/              # Static data
+│   └── App.tsx            # Main application
+├── server/                # Backend server
+│   ├── index.js           # Express server
+│   ├── package.json       # Backend dependencies
+│   └── env.example        # Environment template
+├── index.html             # Main HTML entry point
+├── index.tsx              # React entry point
+├── index.css              # Application styles
+├── package.json           # Frontend dependencies
+├── tsconfig.json          # TypeScript configuration
+├── vite.config.ts         # Vite build configuration
+├── SECURITY_SETUP.md      # Security setup guide
+└── README.md              # This file
 ```
 
 ## 🛠️ Technology Stack
 
 - **Frontend**: React 19 + TypeScript
+- **Backend**: Express.js + Node.js
 - **Styling**: Tailwind CSS + Custom CSS
 - **Build Tool**: Vite
-- **AI Integration**: Google Gemini API
+- **AI Integration**: Google Gemini API (via secure backend)
 - **State Management**: React Hooks
+- **Testing**: Vitest + React Testing Library
 - **Package Manager**: npm
 
 ## 🔐 Environment Variables
 
+### Backend (Server)
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `GEMINI_API_KEY` | Your Google Gemini API key | Yes |
+| `PORT` | Server port (default: 3001) | No |
+
+### Frontend
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `VITE_API_URL` | Backend API URL (default: http://localhost:3001) | No |
+
+> **🔒 Security Note**: API keys are now stored securely on the backend server and never exposed to the frontend.
 
 ## 📱 Features in Detail
 
@@ -126,8 +170,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## ⚠️ Important Notes
 
 - **Never commit your API keys or environment files**
-- **The `.env.local` file is already in `.gitignore`**
-- **Always use environment variables for sensitive configuration**
+- **The `.env` and `.env.local` files are already in `.gitignore`**
+- **API keys are now stored securely on the backend server**
+- **See [SECURITY_SETUP.md](SECURITY_SETUP.md) for detailed security information**
 
 ## 🆘 Support
 
