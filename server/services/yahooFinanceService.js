@@ -3,8 +3,8 @@
  * Provides real-time stock data without API keys or rate limits
  */
 
-const axios = require('axios');
-const cheerio = require('cheerio');
+import axios from 'axios';
+import * as cheerio from 'cheerio';
 
 class YahooFinanceService {
   constructor() {
@@ -219,4 +219,4 @@ class YahooFinanceService {
   }
 }
 
-module.exports = new YahooFinanceService();
+export default new YahooFinanceService();

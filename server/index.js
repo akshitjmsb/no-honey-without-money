@@ -1,8 +1,10 @@
-const express = require('express');
-const cors = require('cors');
-const { GoogleGenAI } = require('@google/genai');
-const yahooFinanceService = require('./services/yahooFinanceService');
-require('dotenv').config();
+import express from 'express';
+import cors from 'cors';
+import { GoogleGenAI } from '@google/genai';
+import yahooFinanceService from './services/yahooFinanceService.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 // Simple in-memory rate limiting
 const rateLimitMap = new Map();

@@ -5,7 +5,7 @@
  * Run this to verify the service is working correctly
  */
 
-const yahooFinanceService = require('./server/services/yahooFinanceService');
+import yahooFinanceService from './server/services/yahooFinanceService.js';
 
 async function testYahooFinance() {
   console.log('🧪 Testing Yahoo Finance Integration...\n');
