@@ -27,8 +27,11 @@ class SimpleYahooFinanceService {
       
       // Get enhanced quote data
       const quoteData = await this.getQuoteData(ticker);
+      
+      console.log(`Enhanced data for ${ticker}:`, JSON.stringify(quoteData, null, 2));
 
-      return {
+      // Ensure we always have enhanced data
+      const enhancedData = {
         currentPrice: priceData.regularMarketPrice,
         priceHistory24h: priceHistory,
         newsSentiment: {
@@ -50,6 +53,9 @@ class SimpleYahooFinanceService {
           nextEarningsDate: quoteData.nextEarningsDate || null
         }
       };
+      
+      console.log(`Final enhanced data for ${ticker}:`, JSON.stringify(enhancedData, null, 2));
+      return enhancedData;
     } catch (error) {
       console.error(`Error fetching data for ${ticker}:`, error.message);
       throw new Error(`Failed to fetch financial data for ${ticker}: ${error.message}`);
@@ -124,7 +130,9 @@ class SimpleYahooFinanceService {
       // For now, always use stable data to ensure consistent values
       // This prevents the fields from changing between requests
       console.log(`Using stable data for ${ticker}`);
-      return this.generateFallbackData(ticker);
+      const stableData = this.generateFallbackData(ticker);
+      console.log(`Stable data for ${ticker}:`, JSON.stringify(stableData, null, 2));
+      return stableData;
     } catch (error) {
       console.warn(`Failed to fetch quote data for ${ticker}:`, error.message);
       return this.generateFallbackData(ticker);
