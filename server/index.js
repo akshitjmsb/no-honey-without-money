@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { GoogleGenAI } = require('@google/genai');
+const yahooFinanceService = require('./services/yahooFinanceService');
 require('dotenv').config();
 
 // Simple in-memory rate limiting
@@ -79,7 +80,7 @@ const validateMessage = (message) => {
   return message.trim();
 };
 
-// Financial data endpoint
+// Financial data endpoint - Now using Yahoo Finance (FREE!)
 app.post('/api/financial-data', async (req, res) => {
   try {
     const { ticker } = req.body;
@@ -89,76 +90,19 @@ app.post('/api/financial-data', async (req, res) => {
     }
 
     const validatedTicker = validateTicker(ticker);
-
-    const prompt = `Provide the following real-time financial data for the stock ticker "${validatedTicker}" in a single, minified JSON object. Do not include any markdown formatting or explanations, only the raw JSON.
-    - currentPrice: The most recent trading price.
-    - priceHistory24h: An array of ~24 hourly price points for the last 24 hours. If unavailable, provide an empty array.
-    - newsSentiment: Analyze recent news headlines and provide a 'sentiment' ('Positive', 'Neutral', 'Negative', 'N/A') and a brief 'summary'.
-    - analystRatings: Provide 'recommendation', and 'targetLow', 'targetAverage', 'targetHigh'. Use null if a value is not available.
-    - keyMetrics: Provide 'beta', 'fiftyTwoWeekHigh', and 'fiftyTwoWeekLow'. Use null if a value is not available.
-    - upcomingEvents: Provide 'nextEarningsDate' in 'YYYY-MM-DD' format, or null if none is scheduled soon.`;
-
-    const response = await genAI.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: { 
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: 'object',
-          properties: {
-            currentPrice: { type: 'number', description: 'The current stock price as a float.' },
-            priceHistory24h: { type: 'array', items: { type: 'number' }, description: 'An array of ~24 hourly price points for the last day. Can be an empty array if not available.' },
-            newsSentiment: {
-              type: 'object',
-              properties: {
-                sentiment: { type: 'string', enum: ['Positive', 'Neutral', 'Negative', 'N/A'], description: 'Overall news sentiment.' },
-                summary: { type: 'string', description: 'A brief, one-sentence summary of the key news driving the sentiment.' }
-              }
-            },
-            analystRatings: {
-              type: 'object',
-              properties: {
-                recommendation: { type: 'string', description: 'Consensus recommendation (e.g., \'Strong Buy\', \'Hold\', \'N/A\').' },
-                targetLow: { type: 'number', nullable: true, description: 'The low-end analyst price target.' },
-                targetAverage: { type: 'number', nullable: true, description: 'The average analyst price target.' },
-                targetHigh: { type: 'number', nullable: true, description: 'The high-end analyst price target.' }
-              }
-            },
-            keyMetrics: {
-              type: 'object',
-              properties: {
-                beta: { type: 'number', nullable: true, description: 'The stock\'s beta (volatility metric).' },
-                fiftyTwoWeekHigh: { type: 'number', nullable: true, description: 'The 52-week high price.' },
-                fiftyTwoWeekLow: { type: 'number', nullable: true, description: 'The 52-week low price.' }
-              }
-            },
-            upcomingEvents: {
-              type: 'object',
-              properties: {
-                nextEarningsDate: { type: 'string', nullable: true, description: 'The next earnings date in YYYY-MM-DD format, or null if not scheduled.' }
-              }
-            }
-          }
-        }
-      },
-    });
-
-    let rawText = response.text;
-    let parsedData;
-
-    try {
-      const startIndex = rawText.indexOf('{');
-      const endIndex = rawText.lastIndexOf('}');
-      if (startIndex > -1 && endIndex > -1 && endIndex > startIndex) {
-        rawText = rawText.substring(startIndex, endIndex + 1);
-      }
-      parsedData = JSON.parse(rawText);
-    } catch (parseError) {
-      console.error(`Failed to parse JSON for ${validatedTicker}:`, parseError);
-      return res.status(500).json({ error: 'Failed to parse financial data' });
+    
+    // Validate ticker format using Yahoo Finance service
+    if (!yahooFinanceService.isValidTicker(validatedTicker)) {
+      return res.status(400).json({ error: 'Invalid ticker format' });
     }
 
-    res.json(parsedData);
+    console.log(`📊 Fetching real market data for ${validatedTicker} from Yahoo Finance...`);
+    
+    // Get real financial data from Yahoo Finance
+    const financialData = await yahooFinanceService.getFinancialData(validatedTicker);
+    
+    console.log(`✅ Successfully fetched data for ${validatedTicker}: $${financialData.currentPrice}`);
+    res.json(financialData);
 
   } catch (error) {
     console.error('Financial data API error:', error);
@@ -167,15 +111,15 @@ app.post('/api/financial-data', async (req, res) => {
       return res.status(400).json({ error: error.message });
     }
     
-    if (error.message?.includes('429') || error.message?.toLowerCase().includes('quota')) {
-      return res.status(429).json({ error: 'Rate limit reached. Please wait a moment.' });
+    if (error.message?.includes('No data found')) {
+      return res.status(404).json({ error: `No data found for ticker: ${req.body.ticker}` });
     }
     
-    res.status(500).json({ error: 'Failed to fetch financial data' });
+    res.status(500).json({ error: 'Failed to fetch financial data from Yahoo Finance' });
   }
 });
 
-// Deep dive report endpoint
+// Deep dive report endpoint - Enhanced with real market data
 app.post('/api/deep-dive', async (req, res) => {
   try {
     const { ticker } = req.body;
@@ -185,8 +129,33 @@ app.post('/api/deep-dive', async (req, res) => {
     }
 
     const validatedTicker = validateTicker(ticker);
+    
+    // Validate ticker format
+    if (!yahooFinanceService.isValidTicker(validatedTicker)) {
+      return res.status(400).json({ error: 'Invalid ticker format' });
+    }
 
-    const prompt = `Generate a concise investment "deep dive" report for the company with ticker "${validatedTicker}". The report should be structured with the following sections, using markdown for formatting:
+    console.log(`🔍 Generating deep dive report for ${validatedTicker} with real market data...`);
+    
+    // Get real market data to enhance the analysis
+    let marketData = {};
+    try {
+      marketData = await yahooFinanceService.getFinancialData(validatedTicker);
+    } catch (error) {
+      console.warn(`Could not fetch market data for ${validatedTicker}:`, error.message);
+    }
+
+    // Create enhanced prompt with real market data
+    const marketDataContext = marketData.currentPrice ? 
+      `\n\n**Current Market Data for ${validatedTicker}:**
+- Current Price: $${marketData.currentPrice}
+- 52-Week High: ${marketData.keyMetrics?.fiftyTwoWeekHigh ? '$' + marketData.keyMetrics.fiftyTwoWeekHigh : 'N/A'}
+- 52-Week Low: ${marketData.keyMetrics?.fiftyTwoWeekLow ? '$' + marketData.keyMetrics.fiftyTwoWeekLow : 'N/A'}
+- Beta: ${marketData.keyMetrics?.beta || 'N/A'}
+- Analyst Recommendation: ${marketData.analystRatings?.recommendation || 'N/A'}
+- Next Earnings: ${marketData.upcomingEvents?.nextEarningsDate || 'N/A'}` : '';
+
+    const prompt = `Generate a concise investment "deep dive" report for the company with ticker "${validatedTicker}". Use the provided market data to enhance your analysis. The report should be structured with the following sections, using markdown for formatting:
 
 ### 1. Company Overview
 - A brief description of the company, its business model, and its primary revenue streams.
@@ -194,6 +163,7 @@ app.post('/api/deep-dive', async (req, res) => {
 ### 2. Financial Health
 - A summary of recent performance (revenue growth, profitability, and key financial ratios like P/E, P/S).
 - A comment on the company's balance sheet strength (debt levels, cash flow).
+- Include analysis of the current market data provided.
 
 ### 3. Growth Catalysts & Competitive Advantages
 - What are the primary drivers for future growth? (e.g., new products, market expansion, industry trends).
@@ -203,7 +173,8 @@ app.post('/api/deep-dive', async (req, res) => {
 - What are the main risks facing the company? (e.g., competition, regulatory changes, economic factors).
 
 ### 5. Investment Thesis Summary
-- A concluding paragraph summarizing why this might be (or might not be) a compelling investment right now.`;
+- A concluding paragraph summarizing why this might be (or might not be) a compelling investment right now.
+- Consider the current market data and analyst sentiment in your conclusion.${marketDataContext}`;
 
     const stream = await genAI.models.generateContentStream({
       model: 'gemini-2.5-flash',
@@ -215,6 +186,7 @@ app.post('/api/deep-dive', async (req, res) => {
       reportText += chunk.text;
     }
 
+    console.log(`✅ Deep dive report generated for ${validatedTicker}`);
     res.json({ report: reportText });
 
   } catch (error) {
