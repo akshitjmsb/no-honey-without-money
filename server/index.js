@@ -6,7 +6,7 @@ require('dotenv').config();
 // Simple in-memory rate limiting
 const rateLimitMap = new Map();
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
-const RATE_LIMIT_MAX_REQUESTS = 10; // 10 requests per minute per IP
+const RATE_LIMIT_MAX_REQUESTS = 50; // 50 requests per minute per IP
 
 const rateLimitMiddleware = (req, res, next) => {
   const clientIP = req.ip || req.connection.remoteAddress;
@@ -42,7 +42,7 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(rateLimitMiddleware);
+// app.use(rateLimitMiddleware); // Temporarily disabled for testing
 
 // Validate environment variables
 if (!process.env.GEMINI_API_KEY) {
