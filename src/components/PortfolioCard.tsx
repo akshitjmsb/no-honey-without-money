@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { memo, useMemo } from 'react';
 import { Sparkline } from './Sparkline';
 import { RangeBar } from './RangeBar';
 import { EditableField } from './EditableField';
+import { LoadingSpinner } from './LoadingSpinner';
 import type { AimDataItem, Holding, FinancialData } from '../types';
 import { formatCurrency } from '../utils/formatters';
 
@@ -15,12 +16,7 @@ interface PortfolioCardProps {
   isCurrent: boolean;
   dragHandlers: {
     onMouseDown?: (e: React.MouseEvent<HTMLDivElement>) => void;
-    onMouseMove?: (e: React.MouseEvent<HTMLDivElement>) => void;
-    onMouseUp?: (e: React.MouseEvent<HTMLDivElement>) => void;
-    onMouseLeave?: (e: React.MouseEvent<HTMLDivElement>) => void;
     onTouchStart?: (e: React.TouchEvent<HTMLDivElement>) => void;
-    onTouchMove?: (e: React.TouchEvent<HTMLDivElement>) => void;
-    onTouchEnd?: (e: React.TouchEvent<HTMLDivElement>) => void;
   };
   onUpdateAimData: (id: number, field: keyof AimDataItem, value: any) => void;
   onUpdateHolding: (ticker: string, field: keyof Holding, value: any) => void;
@@ -28,9 +24,11 @@ interface PortfolioCardProps {
   isDeepDiveLoading: boolean;
   deepDiveTicker: string;
   whatIfPrices: { [key: string]: string };
+  style?: React.CSSProperties;
+  className?: string;
 }
 
-export const PortfolioCard: React.FC<PortfolioCardProps> = ({
+export const PortfolioCard: React.FC<PortfolioCardProps> = memo(({
   item,
   holding,
   financialData,
@@ -45,27 +43,34 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
   isDeepDiveLoading,
   deepDiveTicker,
   whatIfPrices,
+  style,
+  className,
 }) => {
   const price = parseFloat(String(whatIfPrices[item.ticker] || financialData.currentPrice || '0')) || 0;
   
-  let currentMarketValue = holding.numberOfShares * price;
-  let targetAmount = targetInvestment * item.targetPercent;
+  const { currentMarketValue, targetAmount, amountToInvest, progress, sentiment } = useMemo(() => {
+    let currentMarketValue = holding.numberOfShares * price;
+    let targetAmount = targetInvestment * item.targetPercent;
 
-  if (displayCurrency === 'CAD') {
-    if (item.currency === 'USD') targetAmount /= cadToUsdRate;
-    if (holding.currency === 'USD') currentMarketValue /= cadToUsdRate;
-  } else { // displayCurrency is USD
-    if (item.currency === 'CAD') targetAmount *= cadToUsdRate;
-    if (holding.currency === 'CAD') currentMarketValue *= cadToUsdRate;
-  }
+    if (displayCurrency === 'CAD') {
+      if (item.currency === 'USD') targetAmount /= cadToUsdRate;
+      if (holding.currency === 'USD') currentMarketValue /= cadToUsdRate;
+    } else { // displayCurrency is USD
+      if (item.currency === 'CAD') targetAmount *= cadToUsdRate;
+      if (holding.currency === 'CAD') currentMarketValue *= cadToUsdRate;
+    }
 
-  const amountToInvest = targetAmount - currentMarketValue;
-  const progress = targetAmount > 0 ? (currentMarketValue / targetAmount) * 100 : 0;
-  const sentiment = financialData.newsSentiment?.sentiment?.toLowerCase() || 'neutral';
+    const amountToInvest = targetAmount - currentMarketValue;
+    const progress = targetAmount > 0 ? (currentMarketValue / targetAmount) * 100 : 0;
+    const sentiment = financialData.newsSentiment?.sentiment?.toLowerCase() || 'neutral';
+
+    return { currentMarketValue, targetAmount, amountToInvest, progress, sentiment };
+  }, [holding.numberOfShares, price, targetInvestment, item.targetPercent, displayCurrency, item.currency, cadToUsdRate, holding.currency, financialData.newsSentiment?.sentiment]);
 
   return (
     <div
-      className={`portfolio-card ${isCurrent ? 'is-front' : ''} ${item.completed ? 'is-completed' : ''}`}
+      className={className || `portfolio-card ${item.completed ? 'is-completed' : ''}`}
+      style={style}
       {...dragHandlers}
       role="article"
       aria-label={`Portfolio card for ${item.ticker}`}
@@ -114,8 +119,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
       <div className="card-body">
         {financialData.isLoading && !financialData.currentPrice && (
           <div className="card-row">
-            <span className="price-spinner"></span>
-            <span className="ml-2 text-subtle">Loading market data...</span>
+            <LoadingSpinner size="sm" message="Loading market data..." />
           </div>
         )}
         {financialData.error && (
@@ -264,7 +268,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
           aria-label={`Generate deep dive report for ${item.ticker}`}
         >
           {isDeepDiveLoading && deepDiveTicker === item.ticker ? (
-            <div className="button-spinner"></div>
+            <LoadingSpinner size="sm" />
           ) : (
             'Deep Dive'
           )}
@@ -272,4 +276,6 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
       </div>
     </div>
   );
-};
+});
+
+PortfolioCard.displayName = 'PortfolioCard';

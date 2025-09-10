@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, useMemo } from 'react';
 import type { AimDataItem } from '../types';
 import { formatPercent } from '../utils/formatters';
 
@@ -7,25 +7,28 @@ interface SummaryCardProps {
   isCurrent: boolean;
   dragHandlers: {
     onMouseDown?: (e: React.MouseEvent<HTMLDivElement>) => void;
-    onMouseMove?: (e: React.MouseEvent<HTMLDivElement>) => void;
-    onMouseUp?: (e: React.MouseEvent<HTMLDivElement>) => void;
-    onMouseLeave?: (e: React.MouseEvent<HTMLDivElement>) => void;
     onTouchStart?: (e: React.TouchEvent<HTMLDivElement>) => void;
-    onTouchMove?: (e: React.TouchEvent<HTMLDivElement>) => void;
-    onTouchEnd?: (e: React.TouchEvent<HTMLDivElement>) => void;
   };
+  style?: React.CSSProperties;
+  className?: string;
 }
 
-export const SummaryCard: React.FC<SummaryCardProps> = ({
+export const SummaryCard: React.FC<SummaryCardProps> = memo(({
   aimData,
   isCurrent,
   dragHandlers,
+  style,
+  className,
 }) => {
-  const totalAllocation = aimData.reduce((sum, item) => sum + item.targetPercent, 0);
+  const totalAllocation = useMemo(() => 
+    aimData.reduce((sum, item) => sum + item.targetPercent, 0), 
+    [aimData]
+  );
 
   return (
     <div
-      className={`portfolio-card ${isCurrent ? 'is-front' : ''}`}
+      className={className || `portfolio-card is-summary`}
+      style={style}
       {...dragHandlers}
       role="article"
       aria-label="Portfolio summary"
@@ -60,4 +63,6 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({
       </div>
     </div>
   );
-};
+});
+
+SummaryCard.displayName = 'SummaryCard';

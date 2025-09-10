@@ -54,9 +54,11 @@ export const useFinancialData = () => {
               error: 'API request failed. Please try again.' 
             } 
           }));
+        } else {
+          // Exponential backoff: delay increases with each attempt
+          const delay = Math.min(API_CONFIG.RETRY_DELAY * Math.pow(2, attempt - 1), 10000);
+          await new Promise(res => setTimeout(res, delay));
         }
-        
-        await new Promise(res => setTimeout(res, API_CONFIG.RETRY_DELAY * attempt)); 
       }
     }
   }, [financialData]);

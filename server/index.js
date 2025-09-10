@@ -3,12 +3,46 @@ const cors = require('cors');
 const { GoogleGenAI } = require('@google/genai');
 require('dotenv').config();
 
+// Simple in-memory rate limiting
+const rateLimitMap = new Map();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX_REQUESTS = 10; // 10 requests per minute per IP
+
+const rateLimitMiddleware = (req, res, next) => {
+  const clientIP = req.ip || req.connection.remoteAddress;
+  const now = Date.now();
+  
+  if (!rateLimitMap.has(clientIP)) {
+    rateLimitMap.set(clientIP, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    return next();
+  }
+  
+  const clientData = rateLimitMap.get(clientIP);
+  
+  if (now > clientData.resetTime) {
+    clientData.count = 1;
+    clientData.resetTime = now + RATE_LIMIT_WINDOW;
+    return next();
+  }
+  
+  if (clientData.count >= RATE_LIMIT_MAX_REQUESTS) {
+    return res.status(429).json({ 
+      error: 'Too many requests. Please wait a moment before trying again.',
+      retryAfter: Math.ceil((clientData.resetTime - now) / 1000)
+    });
+  }
+  
+  clientData.count++;
+  next();
+};
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(rateLimitMiddleware);
 
 // Validate environment variables
 if (!process.env.GEMINI_API_KEY) {
@@ -24,6 +58,27 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Input validation helpers
+const validateTicker = (ticker) => {
+  if (!ticker || typeof ticker !== 'string') {
+    throw new Error('Ticker must be a non-empty string');
+  }
+  if (ticker.length > 10 || !/^[A-Z0-9.]+$/.test(ticker)) {
+    throw new Error('Invalid ticker format. Must be 1-10 alphanumeric characters');
+  }
+  return ticker.trim().toUpperCase();
+};
+
+const validateMessage = (message) => {
+  if (!message || typeof message !== 'string') {
+    throw new Error('Message must be a non-empty string');
+  }
+  if (message.length > 1000) {
+    throw new Error('Message too long. Maximum 1000 characters');
+  }
+  return message.trim();
+};
+
 // Financial data endpoint
 app.post('/api/financial-data', async (req, res) => {
   try {
@@ -33,7 +88,9 @@ app.post('/api/financial-data', async (req, res) => {
       return res.status(400).json({ error: 'Ticker is required' });
     }
 
-    const prompt = `Provide the following real-time financial data for the stock ticker "${ticker}" in a single, minified JSON object. Do not include any markdown formatting or explanations, only the raw JSON.
+    const validatedTicker = validateTicker(ticker);
+
+    const prompt = `Provide the following real-time financial data for the stock ticker "${validatedTicker}" in a single, minified JSON object. Do not include any markdown formatting or explanations, only the raw JSON.
     - currentPrice: The most recent trading price.
     - priceHistory24h: An array of ~24 hourly price points for the last 24 hours. If unavailable, provide an empty array.
     - newsSentiment: Analyze recent news headlines and provide a 'sentiment' ('Positive', 'Neutral', 'Negative', 'N/A') and a brief 'summary'.
@@ -97,7 +154,7 @@ app.post('/api/financial-data', async (req, res) => {
       }
       parsedData = JSON.parse(rawText);
     } catch (parseError) {
-      console.error(`Failed to parse JSON for ${ticker}:`, parseError);
+      console.error(`Failed to parse JSON for ${validatedTicker}:`, parseError);
       return res.status(500).json({ error: 'Failed to parse financial data' });
     }
 
@@ -105,6 +162,10 @@ app.post('/api/financial-data', async (req, res) => {
 
   } catch (error) {
     console.error('Financial data API error:', error);
+    
+    if (error.message?.includes('Ticker must be') || error.message?.includes('Invalid ticker')) {
+      return res.status(400).json({ error: error.message });
+    }
     
     if (error.message?.includes('429') || error.message?.toLowerCase().includes('quota')) {
       return res.status(429).json({ error: 'Rate limit reached. Please wait a moment.' });
@@ -123,7 +184,9 @@ app.post('/api/deep-dive', async (req, res) => {
       return res.status(400).json({ error: 'Ticker is required' });
     }
 
-    const prompt = `Generate a concise investment "deep dive" report for the company with ticker "${ticker}". The report should be structured with the following sections, using markdown for formatting:
+    const validatedTicker = validateTicker(ticker);
+
+    const prompt = `Generate a concise investment "deep dive" report for the company with ticker "${validatedTicker}". The report should be structured with the following sections, using markdown for formatting:
 
 ### 1. Company Overview
 - A brief description of the company, its business model, and its primary revenue streams.
@@ -157,6 +220,10 @@ app.post('/api/deep-dive', async (req, res) => {
   } catch (error) {
     console.error('Deep dive API error:', error);
     
+    if (error.message?.includes('Ticker must be') || error.message?.includes('Invalid ticker')) {
+      return res.status(400).json({ error: error.message });
+    }
+    
     if (error.message?.includes('429') || error.message?.toLowerCase().includes('quota')) {
       return res.status(429).json({ error: 'Rate limit reached. Please wait a moment.' });
     }
@@ -174,6 +241,8 @@ app.post('/api/chat', async (req, res) => {
       return res.status(400).json({ error: 'Message is required' });
     }
 
+    const validatedMessage = validateMessage(message);
+
     const chat = genAI.chats.create({
       model: 'gemini-2.5-flash',
       config: {
@@ -181,9 +250,9 @@ app.post('/api/chat', async (req, res) => {
       },
     });
 
-    let messageToSend = message;
+    let messageToSend = validatedMessage;
     if (portfolioData) {
-      messageToSend = `Here is the current portfolio data in JSON format. Please analyze it to answer my questions. \n\nTARGET DATA:\n${JSON.stringify(portfolioData.aimData, null, 2)}\n\nHOLDINGS DATA:\n${JSON.stringify(portfolioData.holdings, null, 2)}\n\nMy question is: ${message}`;
+      messageToSend = `Here is the current portfolio data in JSON format. Please analyze it to answer my questions. \n\nTARGET DATA:\n${JSON.stringify(portfolioData.aimData, null, 2)}\n\nHOLDINGS DATA:\n${JSON.stringify(portfolioData.holdings, null, 2)}\n\nMy question is: ${validatedMessage}`;
     }
 
     const stream = await chat.sendMessageStream({ message: messageToSend });
@@ -197,6 +266,10 @@ app.post('/api/chat', async (req, res) => {
 
   } catch (error) {
     console.error('Chat API error:', error);
+    
+    if (error.message?.includes('Message must be') || error.message?.includes('Message too long')) {
+      return res.status(400).json({ error: error.message });
+    }
     
     if (error.message?.includes('429') || error.message?.toLowerCase().includes('quota')) {
       return res.status(429).json({ error: 'Rate limit reached. Please wait a moment.' });
