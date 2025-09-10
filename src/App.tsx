@@ -6,12 +6,13 @@ import { DeepDiveModal } from './components/DeepDiveModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { HeaderControls } from './components/HeaderControls';
 import { CardNavigation } from './components/CardNavigation';
+import { CardDeck } from './components/CardDeck';
 import { useFinancialData } from './hooks/useFinancialData';
 import { useDeepDive } from './hooks/useDeepDive';
 import type { AimDataItem, Holding } from './types';
 import { portfolioData, initialAimDataRaw, initialTargetInvestment } from './data/portfolioData';
 import { formatCurrency } from './utils/formatters';
-import { EXCHANGE_RATES } from './utils/constants';
+import { EXCHANGE_RATES, UI_CONFIG } from './utils/constants';
 
 const App: React.FC = () => {
   // State management
@@ -41,12 +42,7 @@ const App: React.FC = () => {
   
   
   const [whatIfPrices] = useState<{ [key: string]: string }>({});
-  // const [editingField] = useState<EditingField | null>(null);
 
-  // Drag and drop state
-  const isDragging = useRef(false);
-  const dragStartX = useRef(0);
-  const dragDeltaX = useRef(0);
 
   // Custom hooks
   const { financialData, startDataRefresh, stopDataRefresh } = useFinancialData();
@@ -106,15 +102,6 @@ const App: React.FC = () => {
     return totalValue + cashInDisplayCurrency;
   }, [holdings, financialData, whatIfPrices, cashBalance, displayCurrency, aimData]);
 
-  // Time calculations
-  // const daysLeft = useMemo(() => {
-  //   const diff = new Date(targetDate).getTime() - new Date().getTime();
-  //   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-  // }, [targetDate]);
-
-  // const weeksLeft = Math.max(1, Math.ceil(daysLeft / 7));
-  // const investmentNeeded = targetInvestment - totalPortfolioValue;
-  // const weeklyInvestment = investmentNeeded > 0 ? investmentNeeded / weeksLeft : 0;
 
   // Event handlers with useCallback for performance
   const handleUpdateAimData = useCallback((id: number, field: keyof AimDataItem, value: any) => {
@@ -127,12 +114,6 @@ const App: React.FC = () => {
   }, []);
 
   const handleSwipe = useCallback((direction: 'left' | 'right') => {
-    // Clear any existing drag transforms
-    const allCards = document.querySelectorAll('.portfolio-card');
-    allCards.forEach(card => {
-      (card as HTMLElement).style.transform = '';
-    });
-    
     if (direction === 'right') {
       setCurrentCardIndex(prev => {
         const newIndex = Math.max(0, prev - 1);
@@ -146,12 +127,6 @@ const App: React.FC = () => {
     }
   }, [allCards.length]);
 
-  const startDrag = useCallback((e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
-    isDragging.current = true;
-    dragStartX.current = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    e.currentTarget.classList.add('is-dragging');
-    e.preventDefault();
-  }, []);
 
   // Header control handlers
   const handleTitleChange = useCallback((title: string) => setTitle(title), []);
@@ -179,72 +154,6 @@ const App: React.FC = () => {
     };
   }, [currentCardIndex, allCards, startDataRefresh, stopDataRefresh]);
 
-  // Global drag event listeners
-  React.useEffect(() => {
-    const handleGlobalMouseMove = (e: MouseEvent) => {
-      if (!isDragging.current) return;
-      e.preventDefault();
-      const currentX = e.clientX;
-      dragDeltaX.current = currentX - dragStartX.current;
-      const currentCard = document.querySelector('.portfolio-card.is-current');
-      if (currentCard) {
-        (currentCard as HTMLElement).style.transform = `translateX(${dragDeltaX.current}px) rotate(${dragDeltaX.current / 20}deg)`;
-      }
-    };
-
-    const handleGlobalMouseUp = (e: MouseEvent) => {
-      if (!isDragging.current) return;
-      isDragging.current = false;
-      const currentCard = document.querySelector('.portfolio-card.is-current');
-      if (currentCard) {
-        currentCard.classList.remove('is-dragging');
-        if (Math.abs(dragDeltaX.current) > 100) {
-          handleSwipe(dragDeltaX.current < 0 ? 'left' : 'right');
-        } else {
-          (currentCard as HTMLElement).style.transform = '';
-        }
-      }
-      dragDeltaX.current = 0;
-    };
-
-    const handleGlobalTouchMove = (e: TouchEvent) => {
-      if (!isDragging.current) return;
-      e.preventDefault();
-      const currentX = e.touches[0].clientX;
-      dragDeltaX.current = currentX - dragStartX.current;
-      const currentCard = document.querySelector('.portfolio-card.is-current');
-      if (currentCard) {
-        (currentCard as HTMLElement).style.transform = `translateX(${dragDeltaX.current}px) rotate(${dragDeltaX.current / 20}deg)`;
-      }
-    };
-
-    const handleGlobalTouchEnd = (e: TouchEvent) => {
-      if (!isDragging.current) return;
-      isDragging.current = false;
-      const currentCard = document.querySelector('.portfolio-card.is-current');
-      if (currentCard) {
-        currentCard.classList.remove('is-dragging');
-        if (Math.abs(dragDeltaX.current) > 100) {
-          handleSwipe(dragDeltaX.current < 0 ? 'left' : 'right');
-        } else {
-          (currentCard as HTMLElement).style.transform = '';
-        }
-      }
-      dragDeltaX.current = 0;
-    };
-
-    document.addEventListener('mousemove', handleGlobalMouseMove);
-    document.addEventListener('mouseup', handleGlobalMouseUp);
-    document.addEventListener('touchmove', handleGlobalTouchMove, { passive: false });
-    document.addEventListener('touchend', handleGlobalTouchEnd);
-
-    return () => {
-      document.removeEventListener('mousemove', handleGlobalMouseMove);
-      document.removeEventListener('mouseup', handleGlobalMouseUp);
-      document.removeEventListener('touchmove', handleGlobalTouchMove);
-      document.removeEventListener('touchend', handleGlobalTouchEnd);
-    };
-  }, []);
 
   return (
     <ErrorBoundary>
@@ -264,66 +173,23 @@ const App: React.FC = () => {
         />
 
       <main>
-        <div className="card-deck-container">
-          <div className="card-stack">
-            {allCards.map((card, index) => {
-              const isCurrent = index === currentCardIndex;
-              const isBehind = index === currentCardIndex + 1;
-              const isBehind2 = index === currentCardIndex + 2;
-              
-              const cardStyle = {
-                zIndex: isCurrent ? allCards.length + 1 : allCards.length - index,
-                opacity: index > currentCardIndex + 2 ? 0 : 1
-              };
-              
-              const cardClassName = `portfolio-card ${isCurrent ? 'is-current' : ''} ${isBehind ? 'is-behind' : ''} ${isBehind2 ? 'is-behind-2' : ''} ${index < currentCardIndex ? 'is-past' : ''}`;
-              
-              const dragHandlers = {
-                ...(isCurrent && { onMouseDown: startDrag }),
-                ...(isCurrent && { onTouchStart: startDrag }),
-              };
-
-              if ('isSummary' in card) {
-                return (
-                  <SummaryCard
-                    key={`${card.id}-${currentCardIndex}`}
-                    aimData={aimData}
-                    isCurrent={isCurrent}
-                    dragHandlers={dragHandlers}
-                    style={cardStyle}
-                    className={cardClassName}
-                  />
-                );
-              }
-
-              const item = card as AimDataItem;
-              const holding = holdings[item.ticker] || { numberOfShares: 0, costPerShare: 0, currency: item.currency };
-              const data = financialData[item.ticker] || { isLoading: true };
-
-              return (
-                <PortfolioCard
-                  key={`${item.id}-${currentCardIndex}`}
-                  item={item}
-                  holding={holding}
-                  financialData={data}
-                  targetInvestment={targetInvestment}
-                  displayCurrency={displayCurrency}
-                  cadToUsdRate={EXCHANGE_RATES.CAD_TO_USD}
-                  isCurrent={isCurrent}
-                  dragHandlers={dragHandlers}
-                  onUpdateAimData={handleUpdateAimData}
-                  onUpdateHolding={handleUpdateHolding}
-                  onGenerateDeepDive={generateDeepDiveReport}
-                  isDeepDiveLoading={isDeepDiveLoading}
-                  deepDiveTicker={deepDiveTicker}
-                  whatIfPrices={whatIfPrices}
-                  style={cardStyle}
-                  className={cardClassName}
-                />
-              );
-            })}
-          </div>
-        </div>
+        <CardDeck
+          allCards={allCards}
+          currentCardIndex={currentCardIndex}
+          aimData={aimData}
+          holdings={holdings}
+          financialData={financialData}
+          targetInvestment={targetInvestment}
+          displayCurrency={displayCurrency}
+          cadToUsdRate={EXCHANGE_RATES.CAD_TO_USD}
+          onUpdateAimData={handleUpdateAimData}
+          onUpdateHolding={handleUpdateHolding}
+          onGenerateDeepDive={generateDeepDiveReport}
+          isDeepDiveLoading={isDeepDiveLoading}
+          deepDiveTicker={deepDiveTicker}
+          whatIfPrices={whatIfPrices}
+          onSwipe={handleSwipe}
+        />
         
         <CardNavigation
           currentIndex={currentCardIndex}
