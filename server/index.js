@@ -1,43 +1,64 @@
 import express from 'express';
 import cors from 'cors';
-import helmet from 'helmet';
+import pkg from 'helmet';
+const helmet = pkg.default || pkg;
+import rateLimit from 'express-rate-limit';
 import { GoogleGenAI } from '@google/genai';
 import yahooFinanceService from './simpleYahooService.js';
+import rateLimiter from './utils/rateLimiter.js';
+import logger from './utils/logger.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Simple in-memory rate limiting
-const rateLimitMap = new Map();
-const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
-const RATE_LIMIT_MAX_REQUESTS = 50; // 50 requests per minute per IP
+// Initialize rate limiter (optional - will fallback to in-memory if Redis unavailable)
+try {
+  await rateLimiter.connect();
+  logger.info('Redis rate limiter connected successfully');
+} catch (error) {
+  logger.warn('Redis not available, using in-memory rate limiting fallback:', error.message);
+}
 
-const rateLimitMiddleware = (req, res, next) => {
-  const clientIP = req.ip || req.connection.remoteAddress;
-  const now = Date.now();
+// Express rate limiter as backup
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: {
+    error: 'Too many requests from this IP, please try again later.',
+    retryAfter: 900 // 15 minutes in seconds
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Custom Redis-based rate limiter middleware
+const redisRateLimitMiddleware = async (req, res, next) => {
+  const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
   
-  if (!rateLimitMap.has(clientIP)) {
-    rateLimitMap.set(clientIP, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
-    return next();
-  }
-  
-  const clientData = rateLimitMap.get(clientIP);
-  
-  if (now > clientData.resetTime) {
-    clientData.count = 1;
-    clientData.resetTime = now + RATE_LIMIT_WINDOW;
-    return next();
-  }
-  
-  if (clientData.count >= RATE_LIMIT_MAX_REQUESTS) {
-    return res.status(429).json({ 
-      error: 'Too many requests. Please wait a moment before trying again.',
-      retryAfter: Math.ceil((clientData.resetTime - now) / 1000)
+  try {
+    const result = await rateLimiter.checkRateLimit(clientIP, 60000, 50); // 50 requests per minute
+    
+    if (!result.allowed) {
+      logger.warn(`Rate limit exceeded for IP: ${clientIP}`);
+      return res.status(429).json({
+        error: 'Too many requests. Please wait a moment before trying again.',
+        retryAfter: result.retryAfter
+      });
+    }
+    
+    // Add rate limit headers
+    res.set({
+      'X-RateLimit-Limit': '50',
+      'X-RateLimit-Remaining': result.remaining.toString(),
+      'X-RateLimit-Reset': new Date(result.resetTime).toISOString()
     });
+    
+    next();
+  } catch (error) {
+    logger.warn('Redis rate limiter unavailable, falling back to express-rate-limit:', error.message);
+    // Allow request to proceed if rate limiter fails
+    next();
   }
-  
-  clientData.count++;
-  next();
 };
 
 const app = express();
@@ -48,11 +69,24 @@ app.use(helmet()); // Security headers
 app.use(cors());
 app.use(express.json({ limit: '10mb' })); // Add request size limit
 app.use(express.urlencoded({ extended: true, limit: '10mb' })); // Add URL encoded limit
-app.use(rateLimitMiddleware); // Re-enabled for security
+
+// Request logging middleware
+app.use((req, res, next) => {
+  logger.info(`${req.method} ${req.path}`, {
+    ip: req.ip,
+    userAgent: req.get('User-Agent'),
+    timestamp: new Date().toISOString()
+  });
+  next();
+});
+
+// Apply rate limiting
+app.use('/api/', redisRateLimitMiddleware);
+app.use(limiter); // Express rate limiter as backup
 
 // Validate environment variables
 if (!process.env.GEMINI_API_KEY) {
-  console.error('❌ GEMINI_API_KEY environment variable is required');
+  logger.error('GEMINI_API_KEY environment variable is required');
   process.exit(1);
 }
 
@@ -87,10 +121,17 @@ const validateMessage = (message) => {
 
 // Financial data endpoint - Now using Yahoo Finance (FREE!)
 app.post('/api/financial-data', async (req, res) => {
+  const startTime = Date.now();
+  const { ticker } = req.body;
+  
   try {
-    const { ticker } = req.body;
+    logger.info(`Financial data request for ticker: ${ticker}`, {
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
     
     if (!ticker) {
+      logger.warn('Financial data request missing ticker');
       return res.status(400).json({ error: 'Ticker is required' });
     }
 
@@ -98,26 +139,38 @@ app.post('/api/financial-data', async (req, res) => {
     
     // Validate ticker format using Yahoo Finance service
     if (!yahooFinanceService.isValidTicker(validatedTicker)) {
+      logger.warn(`Invalid ticker format: ${ticker}`);
       return res.status(400).json({ error: 'Invalid ticker format' });
     }
 
-    console.log(`📊 Fetching real market data for ${validatedTicker} from Yahoo Finance...`);
+    logger.info(`Fetching market data for ${validatedTicker} from Yahoo Finance`);
     
     // Get real financial data from Yahoo Finance
     const financialData = await yahooFinanceService.getFinancialData(validatedTicker);
     
-    console.log(`✅ Successfully fetched data for ${validatedTicker}: $${financialData.currentPrice}`);
+    const duration = Date.now() - startTime;
+    logger.info(`Successfully fetched data for ${validatedTicker}`, {
+      price: financialData.currentPrice,
+      duration: `${duration}ms`
+    });
+    
     res.json(financialData);
 
   } catch (error) {
-    console.error('Financial data API error:', error);
+    const duration = Date.now() - startTime;
+    logger.error('Financial data API error', {
+      ticker,
+      error: error.message,
+      stack: error.stack,
+      duration: `${duration}ms`
+    });
     
     if (error.message?.includes('Ticker must be') || error.message?.includes('Invalid ticker')) {
       return res.status(400).json({ error: error.message });
     }
     
     if (error.message?.includes('No data found')) {
-      return res.status(404).json({ error: `No data found for ticker: ${req.body.ticker}` });
+      return res.status(404).json({ error: `No data found for ticker: ${ticker}` });
     }
     
     res.status(500).json({ error: 'Failed to fetch financial data from Yahoo Finance' });
@@ -126,10 +179,17 @@ app.post('/api/financial-data', async (req, res) => {
 
 // Deep dive report endpoint - Enhanced with real market data
 app.post('/api/deep-dive', async (req, res) => {
+  const startTime = Date.now();
+  const { ticker } = req.body;
+  
   try {
-    const { ticker } = req.body;
+    logger.info(`Deep dive request for ticker: ${ticker}`, {
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
     
     if (!ticker) {
+      logger.warn('Deep dive request missing ticker');
       return res.status(400).json({ error: 'Ticker is required' });
     }
 
@@ -137,10 +197,11 @@ app.post('/api/deep-dive', async (req, res) => {
     
     // Validate ticker format
     if (!yahooFinanceService.isValidTicker(validatedTicker)) {
+      logger.warn(`Invalid ticker format for deep dive: ${ticker}`);
       return res.status(400).json({ error: 'Invalid ticker format' });
     }
 
-    console.log(`🔍 Generating deep dive report for ${validatedTicker} with real market data...`);
+    logger.info(`Generating deep dive report for ${validatedTicker}`);
     
     // Get real market data to enhance the analysis
     let marketData = {};
@@ -191,11 +252,22 @@ app.post('/api/deep-dive', async (req, res) => {
       reportText += chunk.text;
     }
 
-    console.log(`✅ Deep dive report generated for ${validatedTicker}`);
+    const duration = Date.now() - startTime;
+    logger.info(`Deep dive report generated for ${validatedTicker}`, {
+      duration: `${duration}ms`,
+      reportLength: reportText.length
+    });
+    
     res.json({ report: reportText });
 
   } catch (error) {
-    console.error('Deep dive API error:', error);
+    const duration = Date.now() - startTime;
+    logger.error('Deep dive API error', {
+      ticker,
+      error: error.message,
+      stack: error.stack,
+      duration: `${duration}ms`
+    });
     
     if (error.message?.includes('Ticker must be') || error.message?.includes('Invalid ticker')) {
       return res.status(400).json({ error: error.message });
@@ -211,10 +283,19 @@ app.post('/api/deep-dive', async (req, res) => {
 
 // Chat endpoint
 app.post('/api/chat', async (req, res) => {
+  const startTime = Date.now();
+  const { message, portfolioData, displayCurrency } = req.body;
+  
   try {
-    const { message, portfolioData, displayCurrency } = req.body;
+    logger.info('Chat request received', {
+      messageLength: message?.length || 0,
+      hasPortfolioData: !!portfolioData,
+      displayCurrency,
+      ip: req.ip
+    });
     
     if (!message) {
+      logger.warn('Chat request missing message');
       return res.status(400).json({ error: 'Message is required' });
     }
 
@@ -239,10 +320,21 @@ app.post('/api/chat', async (req, res) => {
       responseText += chunk.text;
     }
 
+    const duration = Date.now() - startTime;
+    logger.info('Chat response generated', {
+      responseLength: responseText.length,
+      duration: `${duration}ms`
+    });
+    
     res.json({ response: responseText });
 
   } catch (error) {
-    console.error('Chat API error:', error);
+    const duration = Date.now() - startTime;
+    logger.error('Chat API error', {
+      error: error.message,
+      stack: error.stack,
+      duration: `${duration}ms`
+    });
     
     if (error.message?.includes('Message must be') || error.message?.includes('Message too long')) {
       return res.status(400).json({ error: error.message });
@@ -258,16 +350,43 @@ app.post('/api/chat', async (req, res) => {
 
 // Error handling middleware
 app.use((error, req, res, next) => {
-  console.error('Unhandled error:', error);
+  logger.error('Unhandled error', {
+    error: error.message,
+    stack: error.stack,
+    url: req.url,
+    method: req.method,
+    ip: req.ip
+  });
   res.status(500).json({ error: 'Internal server error' });
 });
 
 // 404 handler
 app.use((req, res) => {
+  logger.warn('404 - Endpoint not found', {
+    url: req.url,
+    method: req.method,
+    ip: req.ip
+  });
   res.status(404).json({ error: 'Endpoint not found' });
 });
 
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  logger.info('SIGTERM received, shutting down gracefully');
+  await rateLimiter.disconnect();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  logger.info('SIGINT received, shutting down gracefully');
+  await rateLimiter.disconnect();
+  process.exit(0);
+});
+
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/health`);
+  logger.info(`Server running on port ${PORT}`, {
+    port: PORT,
+    environment: process.env.NODE_ENV || 'development',
+    healthCheck: `http://localhost:${PORT}/health`
+  });
 });

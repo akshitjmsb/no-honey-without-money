@@ -4,6 +4,8 @@ import { SummaryCard } from './components/SummaryCard';
 import { ChatComponent } from './components/ChatComponent';
 import { DeepDiveModal } from './components/DeepDiveModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { PortfolioErrorBoundary } from './components/PortfolioErrorBoundary';
+import { ChatErrorBoundary } from './components/ChatErrorBoundary';
 import { HeaderControls } from './components/HeaderControls';
 import { CardNavigation } from './components/CardNavigation';
 import { CardDeck } from './components/CardDeck';
@@ -45,7 +47,15 @@ const App: React.FC = () => {
 
 
   // Custom hooks
-  const { financialData, startDataRefresh, stopDataRefresh } = useFinancialData();
+  const { 
+    financialData, 
+    startDataRefresh, 
+    stopDataRefresh, 
+    globalLoading, 
+    globalError, 
+    retryGlobal, 
+    canRetryGlobal 
+  } = useFinancialData();
   const {
     deepDiveTicker,
     isDeepDiveModalOpen,
@@ -152,12 +162,37 @@ const App: React.FC = () => {
     return () => {
       stopDataRefresh();
     };
-  }, [currentCardIndex, allCards, startDataRefresh, stopDataRefresh]);
+  }, [currentCardIndex, startDataRefresh, stopDataRefresh]); // Removed allCards dependency to prevent loops
 
 
   return (
     <ErrorBoundary>
       <div className="a4-page">
+        {/* Global Loading Indicator */}
+        {globalLoading && (
+          <div className="global-loading-banner">
+            <LoadingSpinner size="sm" message="Loading market data..." variant="dots" />
+          </div>
+        )}
+        
+        {/* Global Error Banner */}
+        {globalError && (
+          <div className="global-error-banner">
+            <div className="error-content">
+              <span className="error-text">{globalError}</span>
+              {canRetryGlobal && (
+                <button 
+                  onClick={retryGlobal}
+                  className="retry-button"
+                  aria-label="Retry loading data"
+                >
+                  Retry
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         <HeaderControls
           title={title}
           onTitleChange={handleTitleChange}
@@ -173,23 +208,25 @@ const App: React.FC = () => {
         />
 
       <main>
-        <CardDeck
-          allCards={allCards}
-          currentCardIndex={currentCardIndex}
-          aimData={aimData}
-          holdings={holdings}
-          financialData={financialData}
-          targetInvestment={targetInvestment}
-          displayCurrency={displayCurrency}
-          cadToUsdRate={EXCHANGE_RATES.CAD_TO_USD}
-          onUpdateAimData={handleUpdateAimData}
-          onUpdateHolding={handleUpdateHolding}
-          onGenerateDeepDive={generateDeepDiveReport}
-          isDeepDiveLoading={isDeepDiveLoading}
-          deepDiveTicker={deepDiveTicker}
-          whatIfPrices={whatIfPrices}
-          onSwipe={handleSwipe}
-        />
+        <PortfolioErrorBoundary ticker={allCards[currentCardIndex] && !('isSummary' in allCards[currentCardIndex]) ? (allCards[currentCardIndex] as AimDataItem).ticker : undefined}>
+          <CardDeck
+            allCards={allCards}
+            currentCardIndex={currentCardIndex}
+            aimData={aimData}
+            holdings={holdings}
+            financialData={financialData}
+            targetInvestment={targetInvestment}
+            displayCurrency={displayCurrency}
+            cadToUsdRate={EXCHANGE_RATES.CAD_TO_USD}
+            onUpdateAimData={handleUpdateAimData}
+            onUpdateHolding={handleUpdateHolding}
+            onGenerateDeepDive={generateDeepDiveReport}
+            isDeepDiveLoading={isDeepDiveLoading}
+            deepDiveTicker={deepDiveTicker}
+            whatIfPrices={whatIfPrices}
+            onSwipe={handleSwipe}
+          />
+        </PortfolioErrorBoundary>
         
         <CardNavigation
           currentIndex={currentCardIndex}
@@ -217,13 +254,15 @@ const App: React.FC = () => {
         </svg>
       </button>
 
-      <ChatComponent
-        isOpen={isChatOpen}
-        onClose={handleChatClose}
-        aimData={aimData}
-        holdings={holdings}
-        displayCurrency={displayCurrency}
-      />
+      <ChatErrorBoundary>
+        <ChatComponent
+          isOpen={isChatOpen}
+          onClose={handleChatClose}
+          aimData={aimData}
+          holdings={holdings}
+          displayCurrency={displayCurrency}
+        />
+      </ChatErrorBoundary>
       </div>
     </ErrorBoundary>
   );

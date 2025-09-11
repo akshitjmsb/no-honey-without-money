@@ -19,8 +19,9 @@ export const EXCHANGE_RATES = {
 export const API_CONFIG = {
   RETRY_ATTEMPTS: 3,
   RETRY_DELAY: 1000, // milliseconds
-  REFRESH_INTERVAL: 120000, // 2 minutes
-  DEBOUNCE_DELAY: 500, // milliseconds
+  REFRESH_INTERVAL: 300000, // 5 minutes - reduced frequency for stability
+  DEBOUNCE_DELAY: 2000, // milliseconds - increased debounce
+  CACHE_DURATION: 300000, // 5 minutes cache for same ticker
 } as const;
 
 // UI Configuration

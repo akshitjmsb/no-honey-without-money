@@ -119,12 +119,26 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = memo(({
       <div className="card-body">
         {financialData.isLoading && !financialData.currentPrice && (
           <div className="card-row">
-            <LoadingSpinner size="sm" message="Loading market data..." />
+            <LoadingSpinner 
+              size="sm" 
+              message="Loading market data..." 
+              variant="dots"
+              color="primary"
+            />
           </div>
         )}
         {financialData.error && (
           <div className="card-row">
-            <span className="text-sm text-red-500">{financialData.error}</span>
+            <div className="error-message">
+              <span className="text-sm text-red-500">{financialData.error}</span>
+              <button 
+                onClick={() => window.location.reload()} 
+                className="retry-button-small"
+                aria-label="Retry loading data"
+              >
+                Retry
+              </button>
+            </div>
           </div>
         )}
 
@@ -138,7 +152,15 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = memo(({
         <div className="card-row">
           <span className="card-label">24h Trend</span>
           <div>
-            <Sparkline data={financialData.priceHistory24h} width={120} height={30} />
+            {financialData.isLoading ? (
+              <LoadingSpinner 
+                size="sm" 
+                variant="skeleton"
+                className="w-30 h-8"
+              />
+            ) : (
+              <Sparkline data={financialData.priceHistory24h} width={120} height={30} />
+            )}
           </div>
         </div>
         
