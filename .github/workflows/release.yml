@@ -33,7 +33,7 @@ jobs:
       run: npm ci --prefer-offline --no-audit
     
     - name: 🔍 Run tests
-      run: npm run test -- --coverage
+      run: npm run test -- --run --coverage
     
     - name: 🏗️ Build application
       run: npm run build
@@ -82,6 +82,7 @@ jobs:
         prerelease: false
     
     - name: 🚀 Deploy to Production
+      if: github.event_name == 'push'
       uses: amondnet/vercel-action@v25
       with:
         vercel-token: ${{ secrets.VERCEL_TOKEN }}
