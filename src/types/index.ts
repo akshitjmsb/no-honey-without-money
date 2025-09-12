@@ -62,6 +62,7 @@ export interface FinancialData {
   upcomingEvents?: {
     nextEarningsDate: string | null;
   };
+  sector?: string;
 }
 
 export interface EditingField {

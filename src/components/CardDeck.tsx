@@ -4,6 +4,7 @@ import { MobilePortfolioCard } from './MobilePortfolioCard';
 import { SummaryCard } from './SummaryCard';
 import { MobileSummaryCard } from './MobileSummaryCard';
 import { useMobileDetection } from '../hooks/useMobileDetection';
+import { portfolioData } from '../data/portfolioData';
 import type { AimDataItem, Holding, FinancialData } from '../types';
 import { UI_CONFIG } from '../utils/constants';
 
@@ -24,6 +25,12 @@ interface CardDeckProps {
   whatIfPrices: { [key: string]: string };
   onSwipe: (direction: 'left' | 'right') => void;
 }
+
+// Helper function to get sector information from portfolio data
+const getSectorFromPortfolioData = (ticker: string): string | undefined => {
+  const portfolioItem = portfolioData.find(item => item.ticker === ticker);
+  return portfolioItem?.sector;
+};
 
 export const CardDeck: React.FC<CardDeckProps> = memo(({
   allCards,
@@ -160,7 +167,13 @@ export const CardDeck: React.FC<CardDeckProps> = memo(({
 
           const item = card as AimDataItem;
           const holding = holdings[item.ticker] || { numberOfShares: 0, costPerShare: 0, currency: item.currency };
-          const data = financialData[item.ticker] || { isLoading: true };
+          const baseData = financialData[item.ticker] || { isLoading: true };
+          
+          // Enhance financial data with sector information from portfolio data
+          const data = {
+            ...baseData,
+            sector: baseData.sector || getSectorFromPortfolioData(item.ticker)
+          };
 
           // Use mobile-optimized card for iPhone 13 Pro and mobile devices
           const CardComponent = isIPhone13Pro || isMobile ? MobilePortfolioCard : PortfolioCard;

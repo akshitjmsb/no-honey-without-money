@@ -1,6 +1,7 @@
 import React, { memo, useMemo } from 'react';
 import type { AimDataItem } from '../types';
 import { formatPercent } from '../utils/formatters';
+import { portfolioData } from '../data/portfolioData';
 
 interface MobileSummaryCardProps {
   aimData: AimDataItem[];
@@ -26,6 +27,26 @@ export const MobileSummaryCard: React.FC<MobileSummaryCardProps> = memo(({
   );
 
   const isBalanced = Math.abs(totalAllocation - 1) < 0.0001;
+
+  // Calculate sector breakdown
+  const sectorBreakdown = useMemo(() => {
+    const sectors: { [key: string]: { count: number; percentage: number } } = {};
+    
+    aimData.forEach(item => {
+      const portfolioItem = portfolioData.find(p => p.ticker === item.ticker);
+      const sector = portfolioItem?.sector || 'Unknown';
+      
+      if (!sectors[sector]) {
+        sectors[sector] = { count: 0, percentage: 0 };
+      }
+      sectors[sector].count++;
+      sectors[sector].percentage += item.targetPercent;
+    });
+    
+    return Object.entries(sectors)
+      .map(([sector, data]) => ({ sector, ...data }))
+      .sort((a, b) => b.percentage - a.percentage);
+  }, [aimData]);
 
   return (
     <div
@@ -58,7 +79,29 @@ export const MobileSummaryCard: React.FC<MobileSummaryCardProps> = memo(({
           </div>
         </div>
 
+        <div className="sector-breakdown">
+          <div className="breakdown-header">
+            <span className="breakdown-title">Sector Analysis</span>
+          </div>
+          <div className="sector-list">
+            {sectorBreakdown.map(({ sector, count, percentage }) => (
+              <div key={sector} className="sector-item">
+                <div className="sector-main">
+                  <span className="sector-name">{sector}</span>
+                  <span className="sector-count">{count} holdings</span>
+                </div>
+                <div className="sector-percentage">
+                  {formatPercent(percentage)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div className="holdings-list">
+          <div className="holdings-header">
+            <span className="holdings-title">Holdings</span>
+          </div>
           {aimData.map((item, index) => (
             <div key={item.id} className="holding-item">
               <div className="holding-main">

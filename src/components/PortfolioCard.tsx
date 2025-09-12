@@ -268,6 +268,13 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = memo(({
           </span>
         </div>
         
+        <div className="card-row">
+          <span className="card-label">Sector</span>
+          <span className="card-value-small">
+            {financialData.sector || 'N/A'}
+          </span>
+        </div>
+        
         <hr className="my-3 border-color" />
         
         <div className="notes-section">

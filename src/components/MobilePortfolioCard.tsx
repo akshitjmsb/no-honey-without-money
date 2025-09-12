@@ -267,6 +267,13 @@ export const MobilePortfolioCard: React.FC<MobilePortfolioCardProps> = memo(({
               {financialData.upcomingEvents?.nextEarningsDate || 'N/A'}
             </span>
           </div>
+          
+          <div className="analysis-row">
+            <span className="analysis-label">Sector</span>
+            <span className="analysis-value">
+              {financialData.sector || 'N/A'}
+            </span>
+          </div>
         </div>
         
         {/* Notes Section */}
