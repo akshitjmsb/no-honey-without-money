@@ -2,6 +2,8 @@
  * Performance monitoring utility for tracking component render times and API calls
  */
 
+import React from 'react';
+
 interface PerformanceMetric {
   name: string;
   duration: number;
