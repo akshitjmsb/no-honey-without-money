@@ -1,0 +1,35 @@
+name: "CodeQL Configuration"
+
+# Disable default queries and use a custom set
+disable-default-queries: false
+
+# Use security and quality queries
+queries:
+  - uses: security-and-quality
+
+# Exclude test files and other non-production code
+paths-ignore:
+  - "**/__tests__/**"
+  - "**/*.test.ts"
+  - "**/*.test.tsx"
+  - "**/*.spec.ts"
+  - "**/*.spec.tsx"
+  - "**/test/**"
+  - "**/tests/**"
+  - "**/coverage/**"
+  - "**/dist/**"
+  - "**/node_modules/**"
+  - "**/.git/**"
+  - "**/src/test/**"
+  - "**/src/**/__tests__/**"
+
+# Include only production source files
+paths:
+  - "src/**/*.ts"
+  - "src/**/*.tsx"
+  - "src/**/*.js"
+  - "src/**/*.jsx"
+  - "!src/**/__tests__/**"
+  - "!src/**/*.test.*"
+  - "!src/**/*.spec.*"
+  - "!src/test/**"
