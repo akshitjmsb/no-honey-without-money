@@ -1,6 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback } from 'react';
-import { PortfolioCard } from './components/PortfolioCard';
-import { SummaryCard } from './components/SummaryCard';
+import React, { useCallback } from 'react';
 import { ChatComponent } from './components/ChatComponent';
 import { DeepDiveModal } from './components/DeepDiveModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -9,43 +7,16 @@ import { ChatErrorBoundary } from './components/ChatErrorBoundary';
 import { HeaderControls } from './components/HeaderControls';
 import { CardNavigation } from './components/CardNavigation';
 import { CardDeck } from './components/CardDeck';
+import { LoadingSpinner } from './components/LoadingSpinner';
 import { useFinancialData } from './hooks/useFinancialData';
 import { useDeepDive } from './hooks/useDeepDive';
-import type { AimDataItem, Holding } from './types';
-import { portfolioData, initialAimDataRaw, initialTargetInvestment } from './data/portfolioData';
-import { formatCurrency } from './utils/formatters';
-import { EXCHANGE_RATES, UI_CONFIG } from './utils/constants';
+import { usePortfolioState } from './hooks/usePortfolioState';
+import { usePortfolioCalculations } from './hooks/usePortfolioCalculations';
+import { useCardNavigation } from './hooks/useCardNavigation';
+import { EXCHANGE_RATES } from './utils/constants';
+import { isAimDataItem } from './types';
 
 const App: React.FC = () => {
-  // State management
-  const [aimData, setAimData] = useState<AimDataItem[]>(() => {
-    const filteredAimDataRaw = initialAimDataRaw.filter(item => item.ticker !== 'CASH');
-    
-    return filteredAimDataRaw.map((item, index) => ({
-      id: index,
-      ticker: item.ticker,
-      targetPercent: initialTargetInvestment > 0 ? item.amountCAD / initialTargetInvestment : 0,
-      currency: item.currency,
-      completed: item.completed,
-      notes: '',
-    }));
-  });
-
-  const [targetDate, setTargetDate] = useState('2025-12-31');
-  const [targetInvestment, setTargetInvestment] = useState(initialTargetInvestment);
-  const [cashBalance, setCashBalance] = useState(() => {
-    const cashItem = initialAimDataRaw.find(item => item.ticker === 'CASH');
-    return cashItem ? cashItem.amountCAD : 0;
-  });
-  const [displayCurrency, setDisplayCurrency] = useState<'CAD' | 'USD'>('CAD');
-  const [title, setTitle] = useState('No Honey without Money');
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [currentCardIndex, setCurrentCardIndex] = useState(0);
-  
-  
-  const [whatIfPrices] = useState<{ [key: string]: string }>({});
-
-
   // Custom hooks
   const { 
     financialData, 
@@ -56,6 +27,7 @@ const App: React.FC = () => {
     retryGlobal, 
     canRetryGlobal 
   } = useFinancialData();
+  
   const {
     deepDiveTicker,
     isDeepDiveModalOpen,
@@ -65,93 +37,51 @@ const App: React.FC = () => {
     closeDeepDiveModal,
   } = useDeepDive();
 
-  // Holdings calculation
-  const holdings = useMemo<{ [key: string]: Holding }>(() => {
-    const aggregated: { [key: string]: { totalCost: number; numberOfShares: number; currency: 'USD' | 'CAD' } } = {};
-    
-    portfolioData.forEach(item => {
-      if (!aggregated[item.ticker]) {
-        aggregated[item.ticker] = { totalCost: 0, numberOfShares: 0, currency: item.currency };
-      }
-      aggregated[item.ticker].totalCost += item.totalCost;
-      aggregated[item.ticker].numberOfShares += item.numberOfShares;
-    });
+  // Portfolio state management
+  const {
+    aimData,
+    targetDate,
+    targetInvestment,
+    cashBalance,
+    displayCurrency,
+    title,
+    isChatOpen,
+    whatIfPrices,
+    holdings,
+    handleUpdateAimData,
+    handleUpdateHolding,
+    handleTitleChange,
+    handleTargetDateChange,
+    handleTargetInvestmentChange,
+    handleCashBalanceChange,
+    handleDisplayCurrencyChange,
+    handleChatOpen,
+    handleChatClose,
+  } = usePortfolioState();
 
-    const finalHoldings: { [key: string]: Holding } = {};
-    for (const ticker in aggregated) {
-      const item = aggregated[ticker];
-      finalHoldings[ticker] = {
-        numberOfShares: item.numberOfShares,
-        costPerShare: item.numberOfShares > 0 ? item.totalCost / item.numberOfShares : 0,
-        currency: item.currency
-      };
-    }
-    return finalHoldings;
-  }, []);
+  // Card navigation
+  const {
+    currentCardIndex,
+    allCards,
+    handleSwipe,
+    goToPrevious,
+    goToNext,
+  } = useCardNavigation({ aimData });
 
-  // All cards including summary
-  const allCards = useMemo(() => [{ isSummary: true, id: 'summary-card' }, ...aimData], [aimData]);
-
-  // Portfolio value calculation
-  const totalPortfolioValue = useMemo(() => {
-    let totalValue = 0;
-    aimData.forEach(item => {
-      const price = parseFloat(String(whatIfPrices[item.ticker] || financialData[item.ticker]?.currentPrice || '0')) || 0;
-      const holding = holdings[item.ticker] || { numberOfShares: 0, currency: item.currency };
-      let value = holding.numberOfShares * price;
-      
-      if (holding.currency === 'USD' && displayCurrency === 'CAD') {
-        value /= EXCHANGE_RATES.CAD_TO_USD;
-      } else if (holding.currency === 'CAD' && displayCurrency === 'USD') {
-        value *= EXCHANGE_RATES.CAD_TO_USD;
-      }
-      totalValue += value;
-    });
-    
-    const cashInDisplayCurrency = displayCurrency === 'USD' ? cashBalance * EXCHANGE_RATES.CAD_TO_USD : cashBalance;
-    return totalValue + cashInDisplayCurrency;
-  }, [holdings, financialData, whatIfPrices, cashBalance, displayCurrency, aimData]);
-
-
-  // Event handlers with useCallback for performance
-  const handleUpdateAimData = useCallback((id: number, field: keyof AimDataItem, value: any) => {
-    setAimData(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
-  }, []);
-
-  const handleUpdateHolding = useCallback((ticker: string, field: keyof Holding, value: any) => {
-    // This would need to be implemented to actually update holdings
-    console.log('Update holding:', ticker, field, value);
-  }, []);
-
-  const handleSwipe = useCallback((direction: 'left' | 'right') => {
-    if (direction === 'right') {
-      setCurrentCardIndex(prev => {
-        const newIndex = Math.max(0, prev - 1);
-        return newIndex;
-      });
-    } else {
-      setCurrentCardIndex(prev => {
-        const newIndex = Math.min(allCards.length - 1, prev + 1);
-        return newIndex;
-      });
-    }
-  }, [allCards.length]);
-
-
-  // Header control handlers
-  const handleTitleChange = useCallback((title: string) => setTitle(title), []);
-  const handleTargetDateChange = useCallback((date: string) => setTargetDate(date), []);
-  const handleTargetInvestmentChange = useCallback((amount: number) => setTargetInvestment(amount), []);
-  const handleCashBalanceChange = useCallback((amount: number) => setCashBalance(amount), []);
-  const handleDisplayCurrencyChange = useCallback((currency: 'CAD' | 'USD') => setDisplayCurrency(currency), []);
-  const handleChatOpen = useCallback(() => setIsChatOpen(true), []);
-  const handleChatClose = useCallback(() => setIsChatOpen(false), []);
-
+  // Portfolio calculations
+  const { totalPortfolioValue } = usePortfolioCalculations({
+    aimData,
+    holdings,
+    financialData,
+    whatIfPrices,
+    cashBalance,
+    displayCurrency,
+  });
 
   // Effect to handle card changes and data refresh
   React.useEffect(() => {
     const currentCard = allCards[currentCardIndex];
-    const ticker = currentCard && !('isSummary' in currentCard) ? (currentCard as AimDataItem).ticker : undefined;
+    const ticker = isAimDataItem(currentCard) ? currentCard.ticker : undefined;
   
     if (ticker) {
       startDataRefresh(ticker);
@@ -162,7 +92,7 @@ const App: React.FC = () => {
     return () => {
       stopDataRefresh();
     };
-  }, [currentCardIndex, startDataRefresh, stopDataRefresh]); // Removed allCards dependency to prevent loops
+  }, [currentCardIndex, startDataRefresh, stopDataRefresh, allCards]);
 
 
   return (
@@ -208,7 +138,7 @@ const App: React.FC = () => {
         />
 
       <main>
-        <PortfolioErrorBoundary ticker={allCards[currentCardIndex] && !('isSummary' in allCards[currentCardIndex]) ? (allCards[currentCardIndex] as AimDataItem).ticker : undefined}>
+        <PortfolioErrorBoundary ticker={isAimDataItem(allCards[currentCardIndex]) ? allCards[currentCardIndex].ticker : undefined}>
           <CardDeck
             allCards={allCards}
             currentCardIndex={currentCardIndex}
@@ -231,8 +161,8 @@ const App: React.FC = () => {
         <CardNavigation
           currentIndex={currentCardIndex}
           totalCards={allCards.length}
-          onPrevious={() => handleSwipe('right')}
-          onNext={() => handleSwipe('left')}
+          onPrevious={goToPrevious}
+          onNext={goToNext}
         />
       </main>
 

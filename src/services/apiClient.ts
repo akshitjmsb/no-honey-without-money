@@ -3,9 +3,12 @@
  */
 
 import { handleApiError } from '../utils/errorHandler';
+import { getEnvConfig } from '../utils/envValidation';
+import { API_CONFIG } from '../utils/constants';
 import type { FinancialData, AimDataItem, Holding } from '../types';
 
-const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3001';
+const { VITE_API_URL } = getEnvConfig();
+const API_BASE_URL = VITE_API_URL || 'http://localhost:3001';
 
 class ApiClient {
   private baseUrl: string;
@@ -24,8 +27,18 @@ class ApiClient {
       },
     };
 
+    // Create AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.REQUEST_TIMEOUT);
+
     try {
-      const response = await fetch(url, { ...defaultOptions, ...options });
+      const response = await fetch(url, { 
+        ...defaultOptions, 
+        ...options,
+        signal: controller.signal 
+      });
+      
+      clearTimeout(timeoutId);
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -34,6 +47,12 @@ class ApiClient {
 
       return await response.json();
     } catch (error) {
+      clearTimeout(timeoutId);
+      
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request timeout. Please try again.');
+      }
+      
       throw handleApiError(error);
     }
   }

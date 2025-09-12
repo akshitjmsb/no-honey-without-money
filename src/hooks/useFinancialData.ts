@@ -25,7 +25,7 @@ export const useFinancialData = () => {
     // Per-ticker rate limiting: prevent too many rapid calls for the same ticker
     const lastFetchTime = lastFetchTimeRef.current.get(ticker) || 0;
     const now = Date.now();
-    if (now - lastFetchTime < 10000) { // Minimum 10 seconds between calls for same ticker
+    if (now - lastFetchTime < API_CONFIG.RATE_LIMIT_INTERVAL) { // Minimum 10 seconds between calls for same ticker
       return;
     }
     lastFetchTimeRef.current.set(ticker, now);
@@ -135,7 +135,7 @@ export const useFinancialData = () => {
 
   // Periodic cache cleanup
   useEffect(() => {
-    const cleanupInterval = setInterval(cleanupCache, 300000); // Clean every 5 minutes
+    const cleanupInterval = setInterval(cleanupCache, API_CONFIG.CACHE_DURATION); // Clean every 5 minutes
     return () => clearInterval(cleanupInterval);
   }, [cleanupCache]);
 

@@ -69,10 +69,21 @@ export interface EditingField {
   field: 'ticker' | 'targetPercent' | 'numberOfShares' | 'costPerShare' | 'notes';
 }
 
-export interface CardData {
-  isSummary?: boolean;
+export interface SummaryCard {
+  isSummary: true;
   id: string;
 }
+
+export type CardData = SummaryCard | AimDataItem;
+
+// Type guard functions
+export const isSummaryCard = (card: CardData): card is SummaryCard => {
+  return 'isSummary' in card && card.isSummary === true;
+};
+
+export const isAimDataItem = (card: CardData): card is AimDataItem => {
+  return !('isSummary' in card);
+};
 
 export interface SparklineProps {
   data: number[] | undefined;

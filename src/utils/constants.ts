@@ -22,6 +22,8 @@ export const API_CONFIG = {
   REFRESH_INTERVAL: 300000, // 5 minutes - reduced frequency for stability
   DEBOUNCE_DELAY: 2000, // milliseconds - increased debounce
   CACHE_DURATION: 300000, // 5 minutes cache for same ticker
+  REQUEST_TIMEOUT: 10000, // 10 seconds timeout for requests
+  RATE_LIMIT_INTERVAL: 10000, // 10 seconds minimum between calls for same ticker
 } as const;
 
 // UI Configuration
