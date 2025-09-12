@@ -1,9 +1,7 @@
 import React, { memo, useCallback, useRef, useEffect } from 'react';
-import { PortfolioCard } from './PortfolioCard';
-import { MobilePortfolioCard } from './MobilePortfolioCard';
-import { SummaryCard } from './SummaryCard';
-import { MobileSummaryCard } from './MobileSummaryCard';
-import { useMobileDetection } from '../hooks/useMobileDetection';
+import { UnifiedPortfolioCard } from './UnifiedPortfolioCard';
+import { UnifiedSummaryCard } from './UnifiedSummaryCard';
+// Mobile detection is now handled within the unified components
 import { portfolioData } from '../data/portfolioData';
 import type { AimDataItem, Holding, FinancialData } from '../types';
 import { UI_CONFIG } from '../utils/constants';
@@ -49,7 +47,7 @@ export const CardDeck: React.FC<CardDeckProps> = memo(({
   whatIfPrices,
   onSwipe,
 }) => {
-  const { isMobile, isIPhone13Pro } = useMobileDetection();
+  // Mobile detection is now handled within the unified components
   // Drag and drop state
   const isDragging = useRef(false);
   const dragStartX = useRef(0);
@@ -150,11 +148,8 @@ export const CardDeck: React.FC<CardDeckProps> = memo(({
           };
 
           if ('isSummary' in card) {
-            // Use mobile-optimized summary card for iPhone 13 Pro and mobile devices
-            const SummaryComponent = isIPhone13Pro || isMobile ? MobileSummaryCard : SummaryCard;
-            
             return (
-              <SummaryComponent
+              <UnifiedSummaryCard
                 key={`${card.id}-${currentCardIndex}`}
                 aimData={aimData}
                 isCurrent={isCurrent}
@@ -174,12 +169,9 @@ export const CardDeck: React.FC<CardDeckProps> = memo(({
             ...baseData,
             sector: baseData.sector || getSectorFromPortfolioData(item.ticker)
           };
-
-          // Use mobile-optimized card for iPhone 13 Pro and mobile devices
-          const CardComponent = isIPhone13Pro || isMobile ? MobilePortfolioCard : PortfolioCard;
           
           return (
-            <CardComponent
+            <UnifiedPortfolioCard
               key={`${item.id}-${currentCardIndex}`}
               item={item}
               holding={holding}

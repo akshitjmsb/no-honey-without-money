@@ -1,3 +1,6 @@
+/* Import unified responsive styles */
+@import './src/styles/unified-responsive.css';
+
 body {
     font-family: 'Inconsolata', monospace;
     background-color: #f0f2f5; /* A subtle, modern gray to make the "page" stand out */
