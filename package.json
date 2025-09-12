@@ -22,7 +22,7 @@
     "install:all": "npm install && npm run server:install"
   },
   "dependencies": {
-    "@google/genai": "^1.14.0",
+    "@google/genai": "^1.19.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
