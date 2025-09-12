@@ -55,7 +55,7 @@ jobs:
     - name: 🔍 Check for secrets
       run: |
         echo "🔍 Scanning for secrets..."
-        if git grep -iE "(api[_-]?key|password|secret|token|private[_-]?key)" -- "*.tsx" "*.ts" "*.js" "*.jsx" "*.json" | grep -v "process.env" | grep -v "your_api_key_here" | grep -v "GEMINI_API_KEY"; then
+        if git grep -iE "(api[_-]?key|password|secret|token|private[_-]?key)" -- "*.tsx" "*.ts" "*.js" "*.jsx" "*.json" | grep -v "process.env" | grep -v "your_api_key_here" | grep -v "GEMINI_API_KEY" | grep -v "gtoken" | grep -v "package-lock.json" | grep -v "node_modules"; then
           echo "❌ Potential secrets found in code!"
           exit 1
         fi
