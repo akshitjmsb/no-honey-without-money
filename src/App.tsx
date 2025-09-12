@@ -97,7 +97,7 @@ const App: React.FC = () => {
 
   return (
     <ErrorBoundary>
-      <div className="a4-page">
+      <div className="a4-page touch-scrollable">
         {/* Global Loading Indicator */}
         {globalLoading && (
           <div className="global-loading-banner">
@@ -137,7 +137,7 @@ const App: React.FC = () => {
           onDisplayCurrencyChange={handleDisplayCurrencyChange}
         />
 
-      <main>
+      <main className="touch-scrollable smooth-scroll">
         <PortfolioErrorBoundary ticker={isAimDataItem(allCards[currentCardIndex]) ? allCards[currentCardIndex].ticker : undefined}>
           <CardDeck
             allCards={allCards}

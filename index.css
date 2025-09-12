@@ -1123,3 +1123,6 @@ input:checked + .toggle-slider:before {
 .portfolio-card.is-summary .card-ticker {
     color: white;
 }
+
+/* Import mobile scrolling fixes */
+@import './src/styles/mobile-scrolling-fixes.css';

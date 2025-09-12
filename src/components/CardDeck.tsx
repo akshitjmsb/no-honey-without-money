@@ -130,8 +130,8 @@ export const CardDeck: React.FC<CardDeckProps> = memo(({
   }, [onSwipe]);
 
   return (
-    <div className="card-deck-container">
-      <div className="card-stack">
+    <div className="card-deck-container touch-scrollable smooth-scroll">
+      <div className="card-stack touch-scrollable no-horizontal-scroll">
         {allCards.map((card, index) => {
           const isCurrent = index === currentCardIndex;
           const isBehind = index === currentCardIndex + 1;
