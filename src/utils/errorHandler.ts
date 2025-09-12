@@ -1,6 +1,9 @@
 /**
  * Centralized error handling utility
+ * @deprecated Use standardizedErrorHandler.ts for new code
  */
+
+import { handleStandardizedError, getErrorMessage, ErrorCodes } from './standardizedErrorHandler';
 
 export interface ApiError {
   message: string;
@@ -26,32 +29,8 @@ export class AppError extends Error {
 }
 
 export const handleApiError = (error: unknown): string => {
-  console.error('API Error:', error);
-
-  if (error instanceof AppError) {
-    return error.message;
-  }
-
-  if (error instanceof Error) {
-    const message = error.message.toLowerCase();
-    
-    // Handle specific error cases
-    if (message.includes('429') || message.includes('quota')) {
-      return 'The API is busy at the moment. Please wait and try again shortly.';
-    }
-    
-    if (message.includes('network') || message.includes('fetch')) {
-      return 'Network error. Please check your connection and try again.';
-    }
-    
-    if (message.includes('timeout')) {
-      return 'Request timed out. Please try again.';
-    }
-    
-    return 'An unexpected error occurred. Please try again.';
-  }
-
-  return 'An unknown error occurred. Please try again.';
+  const standardError = handleStandardizedError(error, 'API');
+  return getErrorMessage(standardError);
 };
 
 export const handleValidationError = (field: string, value: unknown): string => {

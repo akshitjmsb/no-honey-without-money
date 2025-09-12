@@ -1,5 +1,6 @@
 import React from 'react';
 import { ErrorBoundary } from './ErrorBoundary';
+import { createErrorBoundaryHandler } from '../utils/standardizedErrorHandler';
 
 interface PortfolioErrorBoundaryProps {
   children: React.ReactNode;
@@ -33,13 +34,7 @@ export const PortfolioErrorBoundary: React.FC<PortfolioErrorBoundaryProps> = ({
   children, 
   ticker 
 }) => {
-  const handleError = (error: Error, errorInfo: React.ErrorInfo) => {
-    console.error('Portfolio Error:', {
-      ticker,
-      error: error.message,
-      componentStack: errorInfo.componentStack
-    });
-  };
+  const handleError = createErrorBoundaryHandler(`PortfolioErrorBoundary-${ticker || 'unknown'}`);
 
   return (
     <ErrorBoundary

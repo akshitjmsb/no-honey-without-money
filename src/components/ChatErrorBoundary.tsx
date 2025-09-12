@@ -1,5 +1,6 @@
 import React from 'react';
 import { ErrorBoundary } from './ErrorBoundary';
+import { createErrorBoundaryHandler } from '../utils/standardizedErrorHandler';
 
 interface ChatErrorBoundaryProps {
   children: React.ReactNode;
@@ -23,12 +24,7 @@ const ChatErrorFallback: React.FC<{ onRetry: () => void }> = ({ onRetry }) => (
 );
 
 export const ChatErrorBoundary: React.FC<ChatErrorBoundaryProps> = ({ children }) => {
-  const handleError = (error: Error, errorInfo: React.ErrorInfo) => {
-    console.error('Chat Error:', {
-      error: error.message,
-      componentStack: errorInfo.componentStack
-    });
-  };
+  const handleError = createErrorBoundaryHandler('ChatErrorBoundary');
 
   return (
     <ErrorBoundary

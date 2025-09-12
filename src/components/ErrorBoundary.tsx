@@ -1,4 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { createErrorBoundaryHandler } from '../utils/standardizedErrorHandler';
 
 interface Props {
   children: ReactNode;
@@ -34,16 +35,9 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     this.setState({ error, errorInfo });
     
-    // Log error with structured data
-    console.error('ErrorBoundary caught an error:', {
-      error: error.message,
-      stack: error.stack,
-      componentStack: errorInfo.componentStack,
-      errorId: this.state.errorId,
-      timestamp: new Date().toISOString(),
-      userAgent: navigator.userAgent,
-      url: window.location.href
-    });
+    // Use standardized error handling
+    const errorHandler = createErrorBoundaryHandler('ErrorBoundary');
+    errorHandler(error, errorInfo);
 
     // Call custom error handler if provided
     if (this.props.onError) {

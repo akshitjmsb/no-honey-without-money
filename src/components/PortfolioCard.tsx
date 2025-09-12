@@ -1,4 +1,4 @@
-import React, { memo, useMemo } from 'react';
+import React, { memo, useMemo, useCallback } from 'react';
 import { Sparkline } from './Sparkline';
 import { RangeBar } from './RangeBar';
 import { EditableField } from './EditableField';
@@ -46,7 +46,10 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = memo(({
   style,
   className,
 }) => {
-  const price = parseFloat(String(whatIfPrices[item.ticker] || financialData.currentPrice || '0')) || 0;
+  const price = useMemo(() => 
+    parseFloat(String(whatIfPrices[item.ticker] || financialData.currentPrice || '0')) || 0,
+    [whatIfPrices, item.ticker, financialData.currentPrice]
+  );
   
   const { currentMarketValue, targetAmount, amountToInvest, progress, sentiment } = useMemo(() => {
     let currentMarketValue = holding.numberOfShares * price;
@@ -67,6 +70,23 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = memo(({
     return { currentMarketValue, targetAmount, amountToInvest, progress, sentiment };
   }, [holding.numberOfShares, price, targetInvestment, item.targetPercent, displayCurrency, item.currency, cadToUsdRate, holding.currency, financialData.newsSentiment?.sentiment]);
 
+  // Memoized event handlers
+  const handleUpdateAimData = useCallback((field: keyof AimDataItem, value: any) => {
+    onUpdateAimData(item.id, field, value);
+  }, [onUpdateAimData, item.id]);
+
+  const handleUpdateHolding = useCallback((field: keyof Holding, value: any) => {
+    onUpdateHolding(item.ticker, field, value);
+  }, [onUpdateHolding, item.ticker]);
+
+  const handleGenerateDeepDive = useCallback(() => {
+    onGenerateDeepDive(item.ticker);
+  }, [onGenerateDeepDive, item.ticker]);
+
+  const handleRetry = useCallback(() => {
+    window.location.reload();
+  }, []);
+
   return (
     <div
       className={className || `portfolio-card ${item.completed ? 'is-completed' : ''}`}
@@ -81,7 +101,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = memo(({
             <EditableField
               value={item.ticker}
               field="ticker"
-              onUpdate={(value) => onUpdateAimData(item.id, 'ticker', value)}
+              onUpdate={(value) => handleUpdateAimData('ticker', value)}
               className="ticker-input-card"
               aria-label="Edit ticker symbol"
             />
@@ -98,7 +118,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = memo(({
             <input
               type="checkbox"
               checked={item.completed}
-              onChange={(e) => onUpdateAimData(item.id, 'completed', e.target.checked)}
+              onChange={(e) => handleUpdateAimData('completed', e.target.checked)}
               aria-describedby={`completed-${item.ticker}`}
             />
             <span className="toggle-slider"></span>
@@ -132,7 +152,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = memo(({
             <div className="error-message">
               <span className="text-sm text-red-500">{financialData.error}</span>
               <button 
-                onClick={() => window.location.reload()} 
+                onClick={handleRetry} 
                 className="retry-button-small"
                 aria-label="Retry loading data"
               >
@@ -172,7 +192,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = memo(({
             <EditableField
               value={item.targetPercent}
               field="targetPercent"
-              onUpdate={(value) => onUpdateAimData(item.id, 'targetPercent', value)}
+              onUpdate={(value) => handleUpdateAimData('targetPercent', value)}
               aria-label="Edit target percentage"
             />
           </span>
@@ -203,7 +223,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = memo(({
             <EditableField
               value={holding.numberOfShares}
               field="numberOfShares"
-              onUpdate={(value) => onUpdateHolding(item.ticker, 'numberOfShares', value)}
+              onUpdate={(value) => handleUpdateHolding('numberOfShares', value)}
               aria-label="Edit number of shares"
             />
           </span>
@@ -215,7 +235,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = memo(({
             <EditableField
               value={holding.costPerShare}
               field="costPerShare"
-              onUpdate={(value) => onUpdateHolding(item.ticker, 'costPerShare', value)}
+              onUpdate={(value) => handleUpdateHolding('costPerShare', value)}
               aria-label="Edit average cost per share"
             />
           </span>
@@ -282,7 +302,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = memo(({
           <EditableField
             value={item.notes}
             field="notes"
-            onUpdate={(value) => onUpdateAimData(item.id, 'notes', value)}
+            onUpdate={(value) => handleUpdateAimData('notes', value)}
             placeholder="Click to add notes..."
             aria-label="Edit notes"
           />
@@ -291,7 +311,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = memo(({
       
       <div className="card-footer">
         <button
-          onClick={() => onGenerateDeepDive(item.ticker)}
+          onClick={handleGenerateDeepDive}
           className="card-deep-dive-btn"
           disabled={isDeepDiveLoading && deepDiveTicker === item.ticker}
           aria-label={`Generate deep dive report for ${item.ticker}`}

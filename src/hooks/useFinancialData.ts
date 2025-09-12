@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import type { FinancialData } from '../types';
 import { isRateLimitError } from '../utils/errorHandler';
 import { API_CONFIG } from '../utils/constants';
-import { apiClient } from '../services/apiClient';
+import { optimizedApiClient } from '../services/optimizedApiClient';
 import { useLoadingState } from './useLoadingState';
 
 export const useFinancialData = () => {
@@ -51,7 +51,7 @@ export const useFinancialData = () => {
     
     try {
       const data = await globalLoadingState.executeWithRetry(
-        () => apiClient.getFinancialData(ticker)
+        () => optimizedApiClient.getFinancialData(ticker)
       );
       
       if (data) {

@@ -1,4 +1,5 @@
 import React from 'react';
+import { textToSafeHtml } from '../utils/htmlSanitizer';
 
 interface DeepDiveModalProps {
   isOpen: boolean;
@@ -54,7 +55,7 @@ export const DeepDiveModal: React.FC<DeepDiveModalProps> = ({
           ) : (
             <div
               dangerouslySetInnerHTML={{
-                __html: report.replace(/\n/g, '<br />'),
+                __html: textToSafeHtml(report),
               }}
             />
           )}
