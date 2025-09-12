@@ -6,6 +6,13 @@
 
 A sophisticated React-based portfolio management application that helps investors track, analyze, and rebalance their investment portfolios using AI-powered insights.
 
+## 🚀 Recent Updates
+
+- ✅ Dependencies updated and optimized (Vite 6.3.6, server dependencies)
+- ✅ GitHub Actions workflows fixed and stable
+- ✅ CI/CD pipeline fully functional
+- ✅ All tests passing
+
 ## ✨ Features
 
 - **📊 Portfolio Management**: Track holdings across multiple accounts (TFSA, FHSA, trading)
