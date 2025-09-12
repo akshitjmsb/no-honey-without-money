@@ -39,7 +39,7 @@
 /* Card Header */
 .card-header {
   padding: 0.75rem 1rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #000000;
   color: white;
   display: flex;
   justify-content: space-between;
@@ -116,9 +116,9 @@
   padding: 2px 6px;
 }
 
-.sentiment-badge.positive { background: rgba(34, 197, 94, 0.2); color: #16a34a; }
-.sentiment-badge.negative { background: rgba(239, 68, 68, 0.2); color: #dc2626; }
-.sentiment-badge.neutral { background: rgba(107, 114, 128, 0.2); color: #6b7280; }
+.sentiment-badge.positive { background: rgba(255, 255, 255, 0.2); color: #ffffff; }
+.sentiment-badge.negative { background: rgba(255, 255, 255, 0.1); color: #ffffff; }
+.sentiment-badge.neutral { background: rgba(255, 255, 255, 0.15); color: #ffffff; }
 
 /* Completed Toggle */
 .completed-toggle {
@@ -163,7 +163,7 @@
 }
 
 .completed-toggle input:checked + .toggle-slider {
-  background-color: #10b981;
+  background-color: #000000;
 }
 
 .completed-toggle input:checked + .toggle-slider:before {
@@ -175,7 +175,7 @@
   position: absolute;
   top: 0.5rem;
   right: 0.5rem;
-  background: #10b981;
+  background: #000000;
   color: white;
   width: 24px;
   height: 24px;
@@ -204,7 +204,7 @@
 
 .progress-bar {
   height: 100%;
-  background: linear-gradient(90deg, #10b981, #34d399);
+  background: #000000;
   transition: width 0.3s ease;
 }
 
@@ -311,8 +311,8 @@
   color: #1e293b;
 }
 
-.buy-color { color: #10b981; }
-.sell-color { color: #ef4444; }
+.buy-color { color: #000000; font-weight: 600; }
+.sell-color { color: #666666; font-weight: 600; }
 
 /* Holdings Section */
 .holdings-section {
@@ -433,9 +433,9 @@
 }
 
 .card-deep-dive-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #000000;
   color: white;
-  border: none;
+  border: 2px solid #000000;
   padding: 0.75rem 1.5rem;
   border-radius: 8px;
   font-weight: 600;
@@ -458,7 +458,9 @@
 
 .card-deep-dive-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background: #333333;
+  border-color: #333333;
 }
 
 .card-deep-dive-btn:disabled {
@@ -470,7 +472,8 @@
 /* ===== SUMMARY CARD STYLES ===== */
 
 .portfolio-card.is-summary {
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  background: #ffffff;
+  border: 2px solid #000000;
 }
 
 .summary-card-body {
@@ -507,25 +510,25 @@
 }
 
 .allocation-total.balanced {
-  background: #dcfce7;
-  color: #166534;
+  background: #000000;
+  color: #ffffff;
 }
 
 .allocation-total.unbalanced {
-  background: #fef3c7;
-  color: #92400e;
+  background: #666666;
+  color: #ffffff;
 }
 
 .allocation-warning {
   padding: 0.5rem;
-  background: #fef3c7;
+  background: #f5f5f5;
   border-radius: 6px;
-  border-left: 4px solid #f59e0b;
+  border-left: 4px solid #666666;
 }
 
 .warning-text {
   font-size: 0.875rem;
-  color: #92400e;
+  color: #000000;
   font-weight: 500;
 }
 
@@ -627,7 +630,7 @@
 
 .sector-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #667eea, #764ba2);
+  background: #000000;
   border-radius: 4px;
   transition: width 0.3s ease;
 }
@@ -735,18 +738,19 @@
 }
 
 .retry-button-small {
-  background: #ef4444;
+  background: #000000;
   color: white;
-  border: none;
+  border: 2px solid #000000;
   padding: 0.5rem 1rem;
   border-radius: 6px;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .retry-button-small:hover {
-  background: #dc2626;
+  background: #333333;
+  border-color: #333333;
 }
 
 /* ===== ACCESSIBILITY ===== */
@@ -763,12 +767,12 @@
 
 /* Focus states */
 .portfolio-card:focus-within {
-  outline: 2px solid #667eea;
+  outline: 2px solid #000000;
   outline-offset: 2px;
 }
 
 .card-deep-dive-btn:focus {
-  outline: 2px solid #667eea;
+  outline: 2px solid #000000;
   outline-offset: 2px;
 }
 

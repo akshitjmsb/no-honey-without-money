@@ -3,8 +3,8 @@
 
 body {
     font-family: 'Inconsolata', monospace;
-    background-color: #f0f2f5; /* A subtle, modern gray to make the "page" stand out */
-    color: #263238; /* Modern Ledger Text */
+    background-color: #ffffff; /* Clean white background */
+    color: #000000; /* Pure black text */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     -webkit-tap-highlight-color: transparent;
